@@ -1,0 +1,41 @@
+Logistic Regression:
+Cross-Validation Scores: [0.7755102  0.89583333 0.875      0.77083333 0.8125    ]
+Mean Accuracy: 0.8259 (+/-0.0511)
+Multinomial Naive Bayes:
+Cross-Validation Scores: [0.69387755 0.91666667 0.8125     0.72916667 0.83333333]
+Mean Accuracy: 0.7971 (+/-0.0789)
+Linear Support Vector Machine:
+Cross-Validation Scores: [0.87755102 0.9375     0.85416667 0.95833333 0.8125    ]
+Mean Accuracy: 0.8880 (+/-0.0536)
+Random Forest:
+Cross-Validation Scores: [0.79591837 0.85416667 0.72916667 0.89583333 0.8125    ]
+Mean Accuracy: 0.8175 (+/-0.0562)
+Support Vector Machine:
+Cross-Validation Scores: [0.85714286 0.875      0.875      0.79166667 0.8125    ]
+Mean Accuracy: 0.8423 (+/-0.0341)
+
+Best Model: Linear Support Vector Machine
+Confusion Matrix:
+[[ 9  0  1  0  0  0]
+ [ 0 10  0  0  0  0]
+ [ 1  0  9  0  0  0]
+ [ 0  1  1  8  1  0]
+ [ 0  1  0  0  9  0]
+ [ 0  0  0  0  0 10]]
+
+Accuracy: 0.9016
+F1 Score: 0.9004
+
+Classification Report:
+                 precision    recall  f1-score   support
+
+discoverability       0.90      0.90      0.90        10
+       identity       0.83      1.00      0.91        10
+ questionanswer       0.82      0.90      0.86        10
+      smalltalk       1.00      0.73      0.84        11
+      terminate       0.90      0.90      0.90        10
+    transaction       1.00      1.00      1.00        10
+
+       accuracy                           0.90        61
+      macro avg       0.91      0.90      0.90        61
+   weighted avg       0.91      0.90      0.90        61

@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import scikit_posthocs as sp
 
+import handler
+
 from joblib import dump, load
 
 from sklearn.model_selection import train_test_split, cross_val_score, cross_val_predict, StratifiedKFold
@@ -21,13 +23,6 @@ from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
 
 from scipy.stats import kruskal
-
-p_stemmer = PorterStemmer()
-analyzer = CountVectorizer().build_analyzer()
-
-def stemmed_words(doc):
-    text = re.sub(r"[^\w\s]", "", doc.lower())
-    return [p_stemmer.stem(w) for w in analyzer(text)]
 
 def load_corpus(root_path):
     X, y = [], []
@@ -56,6 +51,8 @@ def train_test(root_path, dump_path):
         "Logistic Regression": LogisticRegression(),
         "Multinomial Naive Bayes": MultinomialNB(),
         "Linear Support Vector Machine": LinearSVC(),
+        "Random Forest": RandomForestClassifier(),
+        "Support Vector Machine": SVC()
     }
 
     best_name = None
@@ -65,7 +62,7 @@ def train_test(root_path, dump_path):
     scores_dict = {}
 
     for name, model in candidate_models.items():
-        pipeline = make_pipeline(TfidfVectorizer(tokenizer=stemmed_words, token_pattern=None, ngram_range=(1, 2), use_idf=True, sublinear_tf=True), model) #can refactor stemmed_words regex to token_pattern
+        pipeline = make_pipeline(TfidfVectorizer(tokenizer=handler.stemmed_words, token_pattern=None, ngram_range=(1, 2), use_idf=True, sublinear_tf=True), model) #can refactor stemmed_words regex to token_pattern
         scores = cross_val_score(pipeline, X, y, cv=kfold, scoring='accuracy')
         mean = scores.mean()
         std = scores.std()
@@ -98,6 +95,8 @@ def train_test(root_path, dump_path):
     print(classification_report(y_test, predicted))
 
     best_pipeline.fit(X, y)
+
+    os.makedirs(os.path.dirname(dump_path), exist_ok=True)
     dump(best_pipeline, dump_path)
 
     return scores_dict
