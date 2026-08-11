@@ -33,8 +33,12 @@ def load_corpus(root_path):
     X, y = [], []
 
     for file in os.listdir(root_path):
-        label = os.path.splitext(file)[0]
         file_path = os.path.join(root_path, file)
+
+        if not os.path.isfile(file_path):
+            continue
+
+        label = os.path.splitext(file)[0]
 
         with open(file_path, encoding='utf-8', errors='ignore', mode='r') as f:
             for line in f:
@@ -99,6 +103,8 @@ def train_test(root_path, dump_path):
     return scores_dict
 
 def eval(scores_dict, output_path):
+    os.makedirs(output_path, exist_ok=True)
+
     df = pd.DataFrame(scores_dict)
 
     df_long = df.melt(var_name='Classifier', value_name='Accuracy')
@@ -113,7 +119,6 @@ def eval(scores_dict, output_path):
 
     plot_path = os.path.join(output_path, 'classifier_accuracy_boxplot.png')
     plt.savefig(plot_path, dpi=300)
-    plt.show()
 
     stat, p = kruskal(*scores_dict.values())
     stat_path = os.path.join(output_path, 'kruskal_wallis_results.txt')
@@ -132,3 +137,7 @@ def eval(scores_dict, output_path):
             f.write(posthoc_results.to_string())
         else:
             f.write("There is no significant difference between the models' performance.")
+
+if __name__ == "__main__":
+    scores_dict = train_test(root_path="corpus/top_level_intent", dump_path="dumps/top_level_intent_pipeline.joblib")
+    eval(scores_dict, output_path="evaluation")
