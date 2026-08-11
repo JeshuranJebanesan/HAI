@@ -4,7 +4,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
-import scikit_posthoc as sp
+import scikit_posthocs as sp
 
 from joblib import dump, load
 
@@ -92,23 +92,43 @@ def train_test(root_path, dump_path):
 
     print(f"\nClassification Report:")
     print(classification_report(y_test, predicted))
-    print(f)
 
     best_pipeline.fit(X, y)
     dump(best_pipeline, dump_path)
 
     return scores_dict
 
-def eval(scores_dict):
+def eval(scores_dict, output_path):
+    df = pd.DataFrame(scores_dict)
+
+    df_long = df.melt(var_name='Classifier', value_name='Accuracy')
+
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x='Classifier', y='Accuracy', data=df_long)
+
+    plt.title('Cross-Validation Accuracy of Classifiers')
+    plt.xlabel('Classifier')
+    plt.ylabel('Accuracy')
+    plt.tight_layout()
+
+    plot_path = os.path.join(output_path, 'classifier_accuracy_boxplot.png')
+    plt.savefig(plot_path, dpi=300)
+    plt.show()
+
     stat, p = kruskal(*scores_dict.values())
-    print(f"Kruskal-Wallis H-test: statistic={stat:.4f}, p-value={p:.4f}")
+    stat_path = os.path.join(output_path, 'kruskal_wallis_results.txt')
 
-    if p < 0.05:
-        print("There is a significant difference between the models' performance.")
-        posthoc_results = sp.posthoc_dunn(scores_dict, p_adjust='bonferroni')
-        print("\nPost-hoc Dunn's test results:")
-        print(posthoc_results)
-    else:
-        print("There is no significant difference between the models' performance.")
+    with open(stat_path, 'w', encoding='utf-8') as f:
+        f.write(f"Kruskal-Wallis H-test: statistic={stat:.4f}, p-value={p:.4f}\n")
 
-    
+        if p < 0.05:
+            f.write("There is a significant difference between the models' performance.\n\n")
+
+            posthoc_results = sp.posthoc_dunn(scores_dict, p_adjust='holm')
+            csv_path = os.path.join(output_path, 'posthoc_dunn_results.csv')
+            posthoc_results.to_csv(csv_path, index=True)
+
+            f.write("\nPost-hoc Dunn's test results:\n")
+            f.write(posthoc_results.to_string())
+        else:
+            f.write("There is no significant difference between the models' performance.")
