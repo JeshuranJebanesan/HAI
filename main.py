@@ -7,7 +7,7 @@ def main():
     print("Loading the top-level intent classification model...")
     load_top_level_intent_pipeline()
     print("Model loaded successfully!")
-    print("Plotbot: Hi there! I'm Plotbot. I can help you rent public plots of land for gardening and decide what to plant. Type 'exit' to quit.")
+    print("Plotbot: Hi there! I'm Plotbot. I can help you rent public plots of land for gardening and decide what to plant.\nAsk me for help at any time.\nType 'exit' to quit.")
 
     while True:
         query = input("You: ")

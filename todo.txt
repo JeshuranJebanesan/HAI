@@ -1,0 +1,20 @@
+can check model in handler to see if it hasattr predict proba or decision function
+    confidence of classify intent for discoverability
+
+can refactor traintest without stemmer but with regex in token pattern
+    probably better because small corpus
+
+can import stemmed words from handler in traintest
+    dont need global model
+    can load models in handler and not in main
+
+add other models within cw restrictions
+    10% accuracy on linsvc missing is restrictive
+    mlpclassifier, complementnb, sgdclassifier, ridgeclassifer
+
+can use char ngrams and tune hyperparameters
+    if user makes typos using featureunion pipeline word tdidf with char tfidf should make it easier to understand
+
+right now training takes around 10 seconds. increasing terms like models, folds etc will grow really quickly but within 10 mins training is alright
+need to find some sort of time wrapper to see progress so i know something hasnt broken
+could just learn manually and program with debugs in between but solution probably exists

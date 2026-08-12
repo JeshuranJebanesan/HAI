@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import scikit_posthocs as sp
 
-import handler
+from handler import stemmed_words
 
 from joblib import dump, load
 
@@ -62,7 +62,7 @@ def train_test(root_path, dump_path):
     scores_dict = {}
 
     for name, model in candidate_models.items():
-        pipeline = make_pipeline(TfidfVectorizer(tokenizer=handler.stemmed_words, token_pattern=None, ngram_range=(1, 2), use_idf=True, sublinear_tf=True), model) #can refactor stemmed_words regex to token_pattern
+        pipeline = make_pipeline(TfidfVectorizer(tokenizer=stemmed_words, token_pattern=None, ngram_range=(1, 2), use_idf=True, sublinear_tf=True), model) #can refactor stemmed_words regex to token_pattern
         scores = cross_val_score(pipeline, X, y, cv=kfold, scoring='accuracy')
         mean = scores.mean()
         std = scores.std()
