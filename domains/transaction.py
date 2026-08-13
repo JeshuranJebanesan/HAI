@@ -1,0 +1,1 @@
+def handle_transaction_query(query):
