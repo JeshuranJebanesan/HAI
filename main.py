@@ -8,7 +8,7 @@ def main():
             print("Plotbot: Goodbye!")
             break
         intent = predict_top_level_intent(query)
-        if intent == "question_answer":
+        if intent == "questionanswer":
             print(f"Plotbot: {answer_question(query)}")
         else:
             print(f"Plotbot: {intent}") 
