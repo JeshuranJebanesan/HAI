@@ -10,7 +10,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from joblib import load
 from collections import defaultdict
 
-from db_manager import create_user, update_user_name
+from db_manager import create_user, update_user_name, get_available_crops_for_plot, get_user_plantings, create_planting, get_available_plots
 
 # nltk.download('stopwords', quiet=True)
 
@@ -37,6 +37,7 @@ def stemmed_stopped_words(doc):
 top_level_intent_pipeline = None
 qa_inverted_index = None
 identity_intent_pipeline = None
+transaction_intent_pipeline = None
 
 def load_top_level_intent_pipeline():
     global top_level_intent_pipeline
@@ -49,6 +50,10 @@ def load_qa_inverted_index():
 def load_identity_intent_pipeline():
     global identity_intent_pipeline
     identity_intent_pipeline = load("dumps/identity_intent_pipeline.joblib")
+
+def load_transaction_intent_pipeline():
+    global transaction_intent_pipeline
+    transaction_intent_pipeline = load("dumps/transaction_intent_pipeline.joblib")
 
 ### Top Level Intent
 
@@ -138,10 +143,7 @@ def name_catch(query):
                 return m.group(1).title()
 
     if re.fullmatch(r"[a-zA-Z]+", query.strip()):
-        name = query.strip().title()
-
-    if name:
-        return name
+        return query.strip().title()
 
     return None
 
@@ -169,7 +171,7 @@ def handle_identity_query(query):
 
     sub_intent = predict_identity_intent(query)
 
-    if sub_intent == "get_name":
+    if sub_intent == "request_name":
         name = conversation_context["name"]
         return f"Your name is {name}!"
     elif sub_intent == "change_name":
@@ -184,3 +186,132 @@ def handle_identity_query(query):
             return f"Plotbot: Sure thing! What would you like to change your name to?"
 
     return "Plotbot: Sorry, I didn't really understand that."
+
+### Discoverability
+
+def discoverability():
+    return "Plotbot: I'm built to help you rent plots and plant crops. But you can also ask me general questions, make small talk and even change your name!\nPlotbot: Example phrases you can use are \"I want to rent a plot\", \"how are you\", \"help me\" and \"exit\"."
+
+### Transactions
+
+def predict_plot_intent(query):
+    if transaction_intent_pipeline is None:
+        load_transaction_intent_pipeline()
+    return transaction_intent_pipeline.predict([query])[0]
+
+def reset_transaction_context():
+    conversation_context["transaction"] = {
+        "step": None,
+        "selected_plot": None,
+        "selected_crop": None
+    }
+
+def format_plot_list(plots):
+    if not plots:
+        return "No available plots found matching your criteria."
+    res = "Available Plots:\n"
+    for p in plots[:5]:
+        res += f" - Plot #{p[0]}: {p[1]} sqm, {p[2]} soil, {p[3]} sun (£{p[4]}/mo)\n"
+    return res.strip()
+
+def handle_plot_query(query):
+    tx = conversation_context["transaction"]
+    step = tx.get("step")
+    user_id = conversation_context.get("user_id")
+
+    # add another classifier here
+    if query.lower() in ["cancel", "stop", "abort"]:
+        reset_transaction_context()
+        return "Plotbot: Transaction cancelled."
+
+    if step == "selecting_plot":
+        plot_match = re.search(r'\b(\d+)\b', query)
+        if plot_match:
+            plot_id = int(plot_match.group(1))
+            tx["selected_plot"] = plot_id
+            tx["step"] = "selecting_crop"
+
+            crops = get_available_crops_for_plot(plot_id)
+            crop_names = ", ".join([c[1] for c in crops]) if crops else "Any standard crop"
+            
+            return (f"Plotbot: Selected Plot #{plot_id}.\n"
+                    f"Which crop would you like to plant? Suitable crops for this plot: {crop_names}")
+        
+        sub_intent = predict_plot_intent(query)
+        if sub_intent == "filter_plots":
+            return handle_plot_filtering(query)
+
+        return "Plotbot: Please select a valid Plot ID number (e.g., '10') or type 'cancel'."
+
+    elif step == "selecting_crop":
+        crops = get_available_crops_for_plot(tx["selected_plot"])
+        selected_crop = None
+        
+        for c in crops:
+            if c[1].lower() in query.lower():
+                selected_crop = c
+                break
+
+        if selected_crop:
+            tx["selected_crop"] = selected_crop
+            tx["step"] = "confirming"
+            return (f"Plotbot: Confirm rental of Plot #{tx['selected_plot']} "
+                    f"planting '{selected_crop[1]}'? (Type 'yes' to confirm or 'no' to cancel)")
+        
+        return "Plotbot: Please choose a valid crop from the recommended list or type 'cancel'."
+
+    elif step == "confirming":
+        if "yes" in query.lower() or "confirm" in query.lower():
+            plot_id = tx["selected_plot"]
+            crop_id = tx["selected_crop"][0]
+            
+            create_planting(plot_id, crop_id, user_id)
+            reset_transaction_context()
+            return f"Plotbot: Success! Plot #{plot_id} has been rented and planted."
+        else:
+            reset_transaction_context()
+            return "Plotbot: Transaction cancelled."
+
+    sub_intent = predict_plot_intent(query)
+
+    if sub_intent == "view_plots":
+        plantings = get_user_plantings(user_id)
+        if not plantings:
+            return "Plotbot: You are not currently renting any plots."
+        msg = "Plotbot: Your current plots:\n"
+        for p in plantings:
+            msg += f" - Plot #{p[0]}: Planted with {p[1]} ({p[2]} soil, ${p[3]}/mo)\n"
+        return msg
+
+    elif sub_intent == "rent_plot":
+        tx["step"] = "selecting_plot"
+        plots = get_available_plots()
+        return f"Plotbot: Let's rent a plot!\n{format_plot_list(plots)}\nWhich plot ID would you like to rent?"
+
+    elif sub_intent == "filter_plots":
+        tx["step"] = "selecting_plot"
+        return handle_plot_filtering(query)
+
+    return "Plotbot: I didn't understand your plot request."
+
+def handle_plot_filtering(query):
+    query_lower = query.lower()
+    soil_type = None
+    crop_name = None
+    sort_by = None
+
+    if "cheapest" in query_lower or "cheap" in query_lower:
+        sort_by = "cheapest"
+    
+    for soil in ["loam", "clay", "sandy"]:
+        if soil in query_lower:
+            soil_type = soil
+            break
+
+    for crop in ["tomato", "carrot", "lettuce", "potato", "spinach", "mint"]:
+        if crop in query_lower:
+            crop_name = crop
+            break
+
+    plots = get_available_plots(soil_type=soil_type, crop_name=crop_name, sort_by=sort_by)
+    return f"Plotbot: Here are the matching plots:\n{format_plot_list(plots)}\nWhich plot ID would you like to choose?"

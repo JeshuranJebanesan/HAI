@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from datetime import date
 
 def get_connection():
     return sqlite3.connect("database/transaction.db")
@@ -117,6 +118,86 @@ def seed_database():
     cursor.executemany("INSERT INTO crops (name, ideal_soil, sun_requirements) VALUES (?, ?, ?);", sample_crops)
     cursor.executemany("INSERT INTO plots (size_sqm, soil_type, sun_exposure, monthly_fee) VALUES (?, ?, ?, ?);", sample_plots)
     cursor.executemany("INSERT INTO plantings (plot_id, crop_id, renter_id, planted_date, harvest_date) VALUES (?, ?, ?, ?, ?);", sample_plantings)
+
+    conn.commit()
+    conn.close()
+
+def get_available_plots(soil_type=None, crop_name=None, sort_by=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT p.plot_id, p.size_sqm, p.soil_type, p.sun_exposure, p.monthly_fee
+        FROM plots p
+        LEFT JOIN plantings pl ON p.plot_id = pl.plot_id
+        WHERE pl.plot_id IS NULL
+    """
+    params = []
+
+    if soil_type:
+        query += " AND LOWER(p.soil_type) = LOWER(?)"
+        params.append(soil_type)
+
+    if crop_name:
+        query += """ AND LOWER(p.soil_type) = (
+            SELECT LOWER(ideal_soil) FROM crops WHERE LOWER(name) = LOWER(?)
+        )"""
+        params.append(crop_name)
+
+    if sort_by == "cheapest":
+        query += " ORDER BY p.monthly_fee ASC"
+    elif sort_by == "size":
+        query += " ORDER BY p.size_sqm DESC"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def get_available_crops_for_plot(plot_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT c.crop_id, c.name, c.ideal_soil, c.sun_requirements
+        FROM crops c
+        JOIN plots p ON LOWER(c.ideal_soil) = LOWER(p.soil_type)
+        WHERE p.plot_id = ?;
+    """, (plot_id,))
+
+    crops = cursor.fetchall()
+    conn.close()
+    return crops
+
+def get_user_plantings(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT p.plot_id, c.name, p.soil_type, p.monthly_fee, pl.planted_date, pl.harvest_date
+        FROM plantings pl
+        JOIN plots p ON pl.plot_id = p.plot_id
+        JOIN crops c ON pl.crop_id = c.crop_id
+        WHERE pl.renter_id = ?;
+    """, (user_id,))
+
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def create_planting(plot_id, crop_id, renter_id):
+    """Record a plot transaction in the database."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    today = date.today().strftime("%Y-%m-%d")
+    # Default harvest date set to 6 months ahead
+    harvest = date.today().replace(month=(date.today().month + 6) % 12 or 12).strftime("%Y-%m-%d")
+
+    cursor.execute("""
+        INSERT INTO plantings (plot_id, crop_id, renter_id, planted_date, harvest_date)
+        VALUES (?, ?, ?, ?, ?);
+    """, (plot_id, crop_id, renter_id, today, harvest))
 
     conn.commit()
     conn.close()
