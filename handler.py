@@ -219,7 +219,7 @@ def handle_plot_query(query):
     step = tx.get("step")
     user_id = conversation_context.get("user_id")
 
-    # add another classifier here
+    # add another classifier here or can make general sentiment classifier if the user expresses negative confirmation
     if query.lower() in ["cancel", "stop", "abort"]:
         reset_transaction_context()
         return "Plotbot: Transaction cancelled."
@@ -315,3 +315,6 @@ def handle_plot_filtering(query):
 
     plots = get_available_plots(soil_type=soil_type, crop_name=crop_name, sort_by=sort_by)
     return f"Plotbot: Here are the matching plots:\n{format_plot_list(plots)}\nWhich plot ID would you like to choose?"
+# train transaction classifier and test. can use similar keyword extraction and flow to identity
+# need to form templates and ontology using database and can implement general discoverability from there
+# can also ask at beginning while user specifies identity, if user is a beginner for specific adapted language
