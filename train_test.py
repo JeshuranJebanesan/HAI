@@ -29,15 +29,15 @@ from nltk.corpus import stopwords
 from scipy.stats import kruskal
 
 # can see if faster with question as key instead of id but lab said faster with sorted id which is easier with a number
-def load_csv_corpus(root_path, question='Question', answer='Answer'):
+def load_csv_corpus(root_path, question_col='Question', answer_col='Answer'):
     corpus, question_exists = {}, {} # dont want to iterate through corpus to check if question exists scales quadratic so cache a question to alloted id
     next_id = 0
 
     with open(root_path, mode='r', newline='', encoding='utf-8', errors='ignore') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            question = row.get(question, '').strip()
-            answer = row.get(answer, '').strip()
+            question = row.get(question_col, '').strip()
+            answer = row.get(answer_col, '').strip()
 
             if question:
                 if question in question_exists:
@@ -55,7 +55,7 @@ def load_csv_corpus(root_path, question='Question', answer='Answer'):
 
 #should lemmatise when i have time w pos tagging
 def build_inverted_index(corpus):
-    inverted_index, doc_vectors, doc_norms = defaultdict(lambda: defaultdict(int)), defaultdict(lambda: defaultdict(dict)), defaultdict(lambda: defaultdict(float))
+    inverted_index, doc_vectors, doc_norms = defaultdict(lambda: defaultdict(int)), defaultdict(dict), defaultdict(float)
     N = len(corpus)
     # vectors and norms are for cosine similarity
     # vectors is the angle, norms is the magnitude, better to precompute than calculate for every query
@@ -85,67 +85,6 @@ def build_inverted_index(corpus):
         "N": N
     }
     return index_data
-
-def search_query(query, index_data, top_k=10, confidence_threshold=0.1):
-    inverted_index = index_data["inverted_index"]
-    doc_vectors = index_data["doc_vectors"]
-    doc_norms = index_data["doc_norms"]
-    corpus = index_data["corpus"]
-    N = index_data["N"]
-
-    q_tokens = stemmed_stopped_words(query)
-    q_counts = {}
-    q_vector = {}
-    q_norm_sq = 0.0
-    
-    for w in q_tokens:
-        q_counts[term] = q_counts.get(w, 0) + 1
-
-    for term, tf in q_counts.items():
-        if term in inverted_index:
-            df = len(inverted_index[term])
-            idf = math.log(N / df)
-            weight = math.log(1 + tf) * idf
-            q_vector[term] = weight
-            q_norm_sq += weight ** 2
-
-    q_norm = math.sqrt(q_norm_sq)
-
-    if q_norm == 0.0:
-        return {
-            "status": "FALLBACK",
-            "message": "No matching terms found in index. Please rephrase your query.",
-            "results": []
-        }
-
-    scores = {}
-    for doc_id, d_vec in doc_vectors.items():
-        dot_product = sum(q_vector[t] * d_vec[t] for t in q_vector if t in d_vec)
-        d_norm = doc_norms[doc_id]
-
-        sim = dot_product / (q_norm * d_norm) if (q_norm * d_norm) > 0 else 0.0
-        scores[doc_id] = sim
-
-    ranked_docs = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
-
-    top_doc_id, top_score = ranked_docs[0]
-    results = [
-        (doc_id, score, corpus[doc_id]["question"], corpus[doc_id]["answers"])
-        for doc_id, score in ranked_docs
-    ]
-
-    if top_score < confidence_threshold:
-        return {
-            "status": "LOW_CONFIDENCE",
-            "message": f"Low confidence score ({top_score:.3f}). Consider refining your question.",
-            "results": results
-        }
-
-    return {
-        "status": "SUCCESS",
-        "message": "Match found.",
-        "results": results
-    }
 
 def load_text_corpus(root_path):
     X, y = [], []
@@ -267,7 +206,7 @@ if __name__ == "__main__":
     dump_path = 'dumps/qa_inverted_index.joblib'
 
     print("Loading corpus")
-    corpus = load_csv_corpus(csv_path, question='Question', answer='Answer')
+    corpus = load_csv_corpus(csv_path, question_col='Question', answer_col='Answer')
     print("Loaded corpus")
 
     print("Building inverted index")
