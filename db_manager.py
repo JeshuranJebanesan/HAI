@@ -1,4 +1,5 @@
 import sqlite3
+import os
 
 def get_connection():
     return sqlite3.connect("database/transaction.db")
@@ -119,3 +120,37 @@ def seed_database():
 
     conn.commit()
     conn.close()
+
+def create_user(name):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("INSERT INTO users (name) VALUES (?);", (name,))
+    conn.commit()
+    user_id = cursor.lastrowid
+    conn.close()
+    return user_id
+
+def update_user_name(user_id, new_name):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("UPDATE users SET name = ? WHERE user_id = ?;", (new_name, user_id))
+    conn.commit()
+    conn.close()
+
+def get_user_name(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT name FROM users WHERE user_id = ?;", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else "User"
+
+def reset_database():
+    db_path = "database/transaction.db"
+    if os.path.exists(db_path):
+        os.remove(db_path)
+    init_database()
+    seed_database()

@@ -162,6 +162,15 @@ def train_test(root_path, dump_path):
 
     return scores_dict
 
+def train(root_path, dump_path):
+    X, y = load_text_corpus(root_path)
+
+    pipeline = make_pipeline(TfidfVectorizer(tokenizer=stemmed_words, token_pattern=None, ngram_range=(1,2), use_idf=True, sublinear_tf=True), LinearSVC())
+
+    pipeline.fit(X, y)
+    os.makedirs(os.path.dirname(dump_path), exist_ok=True)
+    dump(pipeline, dump_path)
+
 def eval(scores_dict, output_path):
     os.makedirs(output_path, exist_ok=True)
 
@@ -202,13 +211,14 @@ if __name__ == "__main__":
     # scores_dict = train_test(root_path="corpus/top_level_intent", dump_path="dumps/top_level_intent_pipeline.joblib")
     # eval(scores_dict, output_path="evaluation")
     
-    csv_path = 'corpus/question_answer/question_answer_dataset.csv'
-    dump_path = 'dumps/qa_inverted_index.joblib'
+    #csv_path = 'corpus/question_answer/question_answer_dataset.csv'
+    #dump_path = 'dumps/qa_inverted_index.joblib'
 
-    print("Loading corpus")
-    corpus = load_csv_corpus(csv_path, question_col='Question', answer_col='Answer')
-    print("Loaded corpus")
+    #print("Loading corpus")
+    #corpus = load_csv_corpus(csv_path, question_col='Question', answer_col='Answer')
+    #print("Loaded corpus")
 
-    print("Building inverted index")
-    index = build_inverted_index(corpus)
-    dump(index, dump_path)
+    #print("Building inverted index")
+    #index = build_inverted_index(corpus)
+    #dump(index, dump_path)
+    train(root_path="corpus/identity", dump_path="dumps/identity_intent_pipeline.joblib")

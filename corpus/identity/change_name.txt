@@ -1,0 +1,11 @@
+I would like to change my name.
+I typed my name wrong.
+Please let me re enter my name.
+Could I retype my name.
+You got my name wrong.
+That isn't my name.
+Update my name.
+Reset my name.
+Change my name.
+That's not what I'm called.
+That's not what I want to be my user name.
