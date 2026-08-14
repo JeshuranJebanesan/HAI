@@ -119,5 +119,3 @@ def seed_database():
 
     conn.commit()
     conn.close()
-
-def get_or
