@@ -19,7 +19,6 @@ conversation_context = {
     "user_id": None,
     "name": None,
     "transaction" : {
-        "step": None,
         "selected_plot": None,
         "selected_crop": None
     }
@@ -186,6 +185,46 @@ def handle_identity_query(query):
 
     return "Plotbot: Sorry, I didn't really understand that."
 
+def handle_name_capture(query):
+    name = name_catch(query)
+    if not name:
+        return "Plotbot: Sorry I didn't get that. Could you tell me your name again (e.g 'Alice')."
+
+    conversation_context["state"] = "idle"
+    if conversation_context["name"]:
+        return handle_update_name(name)
+
+    return handle_set_name(name)
+
+def handle_request_name(query):
+    name = conversation_context["name"]
+    return f"Plotbot: Your name is {name}!"
+
+def handle_set_name(name):
+    conversation_context["name"] = name
+    conversation_context["user_id"] = create_user(name)
+    return f"Plotbot: Nice to meet you {name}!\nPlotbot: I'm here to help you rent plots and plant crops. Ask me if you want any help or type 'exit' to quit."
+
+def handle_update_name(name):
+    user_id = conversation_context["user_id"]
+    conversation_context["name"] = name
+    update_user_name(user_id, name)
+    return f"Plotbot: Cool! Your name has been updated to {name}."
+
+def route_identity_intent(query):
+    state = conversation_context["state"]
+    intent = predict_identity_intent(query) if state == "idle" else None
+
+    match (state, intent):
+        case ("awaiting_name", _):
+            return handle_name_capture(query)
+
+        case ("idle", _):
+            return handlers[intent](query)
+
+        case _:
+            return "Plotbot: Sorry, I didn't really understand that."
+
 ### Discoverability
 
 def discoverability(query):
@@ -193,42 +232,78 @@ def discoverability(query):
 
 ### Transactions
 
-def predict_plot_intent(query):
+def predict_transaction_intent(query):
     if transaction_intent_pipeline is None:
         load_transaction_intent_pipeline()
     return transaction_intent_pipeline.predict([query])[0]
 
 def reset_transaction_context():
     conversation_context["transaction"] = {
-        "step": None,
         "selected_plot": None,
         "selected_crop": None
     }
+    conversation_context["state"] = "idle"
 
 def format_plot_list(plots):
     if not plots:
         return "No available plots found matching your criteria."
-    res = "Available Plots:\n"
-    for p in plots[:5]:
+    res = "Plots:\n"
+    for p in plots:
         res += f" - Plot #{p[0]}: {p[1]} sqm, {p[2]} soil, {p[3]} sun (£{p[4]}/mo)\n"
     return res.strip()
 
-def handle_plot_query(query):
+def plot_catch(query):
+    match = re.search(r'\b(\d+)\b', query)
+    return int(match.group(1)) if match else None
+
+def crop_catch(query, available_crops):
+    query_lower = query.lower()
+    for crop in available_crops:
+        if crop[1].lower() in query_lower:
+            return crop
+    return None
+
+def handle_rent_plot(query):
+    conversation_context["state"] = "selecting_plot"
+    plots = get_available_plots()
+    return f"Plotbot: Let's rent a plot!\n{format_plot_list(plots)}\nWhich plot ID would you like to rent?"
+
+def handle_view_plots(query):
+    return
+
+def handle_filter_plots(query):
+    query_lower = query.lower()
+    soil_type = None
+    crop_name = None
+    sort_by = None
+
+    if "cheapest" in query_lower or "cheap" in query_lower:
+        sort_by = "cheapest"
+    
+    for soil in ["loam", "clay", "sandy"]:
+        if soil in query_lower:
+            soil_type = soil
+            break
+
+    for crop in ["tomato", "carrot", "lettuce", "potato", "spinach", "mint"]:
+        if crop in query_lower:
+            crop_name = crop
+            break
+
+    plots = get_available_plots(soil_type=soil_type, crop_name=crop_name, sort_by=sort_by)
+    return f"Plotbot: Here are the matching plots:\n{format_plot_list(plots)}\nWhich plot ID would you like to choose?"
+
+def handle_transaction_query(query):
     tx = conversation_context["transaction"]
-    step = tx.get("step")
-    user_id = conversation_context.get("user_id")
+    state = conversation_context["state"]
+    user_id = conversation_context["user_id"]
 
-    # add another classifier here or can make general sentiment classifier if the user expresses negative confirmation
-    if query.lower() in ["cancel", "stop", "abort"]:
-        reset_transaction_context()
-        return "Plotbot: Transaction cancelled."
-
-    if step == "selecting_plot":
+    if state == "selecting_plot":
         plot_match = re.search(r'\b(\d+)\b', query)
         if plot_match:
             plot_id = int(plot_match.group(1))
             tx["selected_plot"] = plot_id
-            tx["step"] = "selecting_crop"
+            tx["state"] = "selecting_crop"
 
             crops = get_available_crops_for_plot(plot_id)
             crop_names = ", ".join([c[1] for c in crops]) if crops else "Any standard crop"
@@ -288,32 +363,31 @@ def handle_plot_query(query):
         return f"Plotbot: Let's rent a plot!\n{format_plot_list(plots)}\nWhich plot ID would you like to rent?"
 
     elif sub_intent == "filter_plots":
-        tx["step"] = "selecting_plot"
         return handle_plot_filtering(query)
 
     return "Plotbot: I didn't understand your plot request."
 
-def handle_plot_filtering(query):
-    query_lower = query.lower()
-    soil_type = None
-    crop_name = None
-    sort_by = None
+def route_transaction_intent(query):
+    state = conversation_context["state"]
+    intent = predict_transaction_intent(query)
+    user_id = conversation_context["user_id"]
+    tx = conversation_context["transaction"]
 
-    if "cheapest" in query_lower or "cheap" in query_lower:
-        sort_by = "cheapest"
-    
-    for soil in ["loam", "clay", "sandy"]:
-        if soil in query_lower:
-            soil_type = soil
-            break
+    print(intent)
 
-    for crop in ["tomato", "carrot", "lettuce", "potato", "spinach", "mint"]:
-        if crop in query_lower:
-            crop_name = crop
-            break
+    match state:
+        case ("selecting_plot", cancel):
+        case ("selecting_plot", filter):
+        case ("selecting_plot", _):
 
-    plots = get_available_plots(soil_type=soil_type, crop_name=crop_name, sort_by=sort_by)
-    return f"Plotbot: Here are the matching plots:\n{format_plot_list(plots)}\nWhich plot ID would you like to choose?"
+        case ("selecting_crop", cancel):
+        case ("selecting_crop", _):
+
+        case ("confirming_transaction", _):
+
+        case("idle, _"):
+                
+                        
 # train transaction classifier and test. can use similar keyword extraction and flow to identity
 # need to form templates and ontology using database and can implement general discoverability from there
 # can also ask at beginning while user specifies identity, if user is a beginner for specific adapted language
@@ -325,13 +399,8 @@ def handle_small_talk():
 
 ### Top Level Intent
 
-handlers = {
-    "identity": handle_identity_query,
-    "discoverability": discoverability,
-    "questionanswer": handle_question_answer,
-    "smalltalk": handle_small_talk,
-    "transaction": handle_plot_query
-}
+# can also refactor all intent handlers to implement sub intent handler functions and map the handlers here.
+# for now identity is small enough without reused code to go without but can look at transaction handler.
 
 def predict_top_level_intent(query):
     if top_level_intent_pipeline is None:
@@ -341,9 +410,10 @@ def predict_top_level_intent(query):
 # going to route given state then checking intent.
 # should look into this as its interesting. theres a few global intents like terminate which always have the same result so no point writing for each state
 # is there a cleanest coding for states and inputs e.g given n states, if there is an intent which has the same result for n-1 states, should i route that intent first instead of state
-def route_intent(query):
+
+def route_top_level_intent(query):
     state = conversation_context["state"]
-    intent = predict_top_level_intent(query)
+    intent = predict_top_level_intent(query) if state == "idle" else None
     print(state, intent)
 
     match (state, intent):
@@ -351,9 +421,20 @@ def route_intent(query):
             return handle_identity_query(query)
         case (_, "terminate"):
             return intent
-        case("selecting_plot", _):
-            return handle_plot_query(query)
+        case("selecting_plot" | "selecting_crop | confirming_transaction", _):
+            return handle_transaction_query(query)
         case("idle", _):
             return handlers[intent](query)
         case _:
             return f"Unknown Error"
+
+handlers = {
+    "identity": handle_identity_query,
+    "discoverability": discoverability,
+    "questionanswer": handle_question_answer,
+    "smalltalk": handle_small_talk,
+    "transaction": handle_transaction_query,
+    "rent_plot": handle_rent_plot,
+    "view_plots": handle_view_plots,
+    "filter_plots": handle_filter_plots
+}

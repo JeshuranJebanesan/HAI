@@ -1,8 +1,6 @@
 from handler import route_intent
 from db_manager import reset_database
 
-
-
 def main():
     reset_database()
 
