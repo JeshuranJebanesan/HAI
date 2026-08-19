@@ -1,8 +1,6 @@
 from handler import predict_top_level_intent, answer_question, handle_identity_query, discoverability, conversation_context
 from db_manager import init_database, seed_database, reset_database
 
-
-
 def main():
     reset_database()
 

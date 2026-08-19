@@ -23,7 +23,6 @@ conversation_context = {
 
 p_stemmer = PorterStemmer()
 analyzer = CountVectorizer().build_analyzer()
-sw = set(stopwords.words('english'))
 
 def stemmed_words(doc):
     text = re.sub(r"[^\w\s]", "", doc.lower())
@@ -31,7 +30,7 @@ def stemmed_words(doc):
 
 def stemmed_stopped_words(doc):
     tokens = re.findall(r'\b\w+\b', doc.lower())
-    return [p_stemmer.stem(w) for w in tokens if w not in sw and not w.isdigit()]
+    return [p_stemmer.stem(w) for w in tokens if w not in stopwords.words('english') and not w.isdigit()]
 
 ### Load Models
 
@@ -62,14 +61,6 @@ def predict_top_level_intent(query):
     if top_level_intent_pipeline is None:
         load_top_level_intent_pipeline()
     return top_level_intent_pipeline.predict([query])[0]
-
-def route_intent(query):
-    intent = predict_top_level_intent()
-
-    if conversation_context["awaiting_name"]:
-        return handle_identity_query()
-
-    swit
 
 ### Question Answer
 
@@ -124,8 +115,7 @@ def search_query(query, index_data, confidence_threshold=0.1):
 def answer_question(query):
     if qa_inverted_index is None:
         load_qa_inverted_index()
-    answer = search_query(query, qa_inverted_index)
-    return f"Plotbot: {answer}"
+    return "Plotbot: search_query(query, qa_inverted_index)"
 
 ### Identity
 
@@ -177,7 +167,7 @@ def handle_identity_query(query):
                 conversation_context["name"] = name
                 update_user_name(user_id, name)
                 return f"Plotbot: Cool! Your name has been updated to {name}."
-        return "Plotbot: Sorry I didn't get that. Could you tell me your name again (e.g 'Alice')"
+        return "Plotbot: Sorry I didn't get that. Could you tell me your name again (e.g 'Alice')"/
 
     sub_intent = predict_identity_intent(query)
 
