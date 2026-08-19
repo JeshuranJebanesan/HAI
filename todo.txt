@@ -23,3 +23,8 @@ for user testing i can create a file similar to main.py,
 instead of routing, it will show which domain it thinks the user wanted and ask for the domain the user actually wanted
 i can then either incorporate this result into the corpus after evaluation has finished
 this tests only top level intent router but i can use this format for all the classifiers
+
+multiple rounds of cleaning
+query is cleaned in toplevelintent, then maybe in sublevelintent
+should clean query and then send to intentrouters
+maybe a problem if different cleaning needed e.g stopwords perform worse on transactions but better on questionanswer

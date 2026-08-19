@@ -15,10 +15,14 @@ from db_manager import create_user, update_user_name, get_available_crops_for_pl
 # nltk.download('stopwords', quiet=True)
 
 conversation_context = {
+    "state": "awaiting_name",
     "user_id": None,
     "name": None,
-    "awaiting_name" : True,
-    "transaction" : {}
+    "transaction" : {
+        "step": None,
+        "selected_plot": None,
+        "selected_crop": None
+    }
 }
 
 p_stemmer = PorterStemmer()
@@ -55,21 +59,6 @@ def load_identity_intent_pipeline():
 def load_transaction_intent_pipeline():
     global transaction_intent_pipeline
     transaction_intent_pipeline = load("dumps/transaction_intent_pipeline.joblib")
-
-### Top Level Intent
-
-def predict_top_level_intent(query):
-    if top_level_intent_pipeline is None:
-        load_top_level_intent_pipeline()
-    return top_level_intent_pipeline.predict([query])[0]
-
-def route_intent(query):
-    intent = predict_top_level_intent()
-
-    if conversation_context["awaiting_name"]:
-        return handle_identity_query()
-
-    swit
 
 ### Question Answer
 
@@ -121,7 +110,7 @@ def search_query(query, index_data, confidence_threshold=0.1):
 
     return corpus[best_doc_id]['answers']
 
-def answer_question(query):
+def handle_question_answer(query):
     if qa_inverted_index is None:
         load_qa_inverted_index()
     answer = search_query(query, qa_inverted_index)
@@ -163,21 +152,21 @@ def predict_identity_intent(query):
     return identity_intent_pipeline.predict([query])[0]
 
 def handle_identity_query(query):
-    if conversation_context.get("awaiting_name"):
+    if conversation_context["state"] == "awaiting_name":
         name = name_catch(query)
         if name:
-            conversation_context["awaiting_name"] = False
+            conversation_context["state"] = "idle"
             if not conversation_context["name"]:
                 conversation_context["name"] = name
                 user_id = create_user(name)
                 conversation_context["user_id"] = user_id
-                return f"Plotbot: Nice to meet you {name}!"
+                return f"Plotbot: Nice to meet you {name}!\nPlotbot: I'm here to help you rent plots and plant crops. Ask me if you want any help or type 'exit' to quit."
             else:
                 user_id = conversation_context["user_id"]
                 conversation_context["name"] = name
                 update_user_name(user_id, name)
                 return f"Plotbot: Cool! Your name has been updated to {name}."
-        return "Plotbot: Sorry I didn't get that. Could you tell me your name again (e.g 'Alice')"
+        return "Plotbot: Sorry I didn't get that. Could you tell me your name again (e.g 'Alice')."
 
     sub_intent = predict_identity_intent(query)
 
@@ -188,18 +177,18 @@ def handle_identity_query(query):
         name = name_catch(query)
         if name and name.lower() != conversation_context["name"].lower():
             user_id = conversation_context["user_id"]
-            update_user_name(user_id, name)
             conversation_context["name"] = name
+            update_user_name(user_id, name)
             return f"Plotbot: Updated! Your name is now {name}."
         else:
-            conversation_context["awaiting_name"] = True
+            conversation_context["state"] = "awaiting_name"
             return f"Plotbot: Sure thing! What would you like to change your name to?"
 
     return "Plotbot: Sorry, I didn't really understand that."
 
 ### Discoverability
 
-def discoverability():
+def discoverability(query):
     return "Plotbot: I'm built to help you rent plots and plant crops. But you can also ask me general questions, make small talk and even change your name!\nPlotbot: Example phrases you can use are \"I want to rent a plot\", \"how are you\", \"help me\" and \"exit\"."
 
 ### Transactions
@@ -328,3 +317,43 @@ def handle_plot_filtering(query):
 # train transaction classifier and test. can use similar keyword extraction and flow to identity
 # need to form templates and ontology using database and can implement general discoverability from there
 # can also ask at beginning while user specifies identity, if user is a beginner for specific adapted language
+
+### Smalltalk
+
+def handle_small_talk():
+    return
+
+### Top Level Intent
+
+handlers = {
+    "identity": handle_identity_query,
+    "discoverability": discoverability,
+    "questionanswer": handle_question_answer,
+    "smalltalk": handle_small_talk,
+    "transaction": handle_plot_query
+}
+
+def predict_top_level_intent(query):
+    if top_level_intent_pipeline is None:
+        load_top_level_intent_pipeline()
+    return top_level_intent_pipeline.predict([query])[0]
+
+# going to route given state then checking intent.
+# should look into this as its interesting. theres a few global intents like terminate which always have the same result so no point writing for each state
+# is there a cleanest coding for states and inputs e.g given n states, if there is an intent which has the same result for n-1 states, should i route that intent first instead of state
+def route_intent(query):
+    state = conversation_context["state"]
+    intent = predict_top_level_intent(query)
+    print(state, intent)
+
+    match (state, intent):
+        case ("awaiting_name", _):
+            return handle_identity_query(query)
+        case (_, "terminate"):
+            return intent
+        case("selecting_plot", _):
+            return handle_plot_query(query)
+        case("idle", _):
+            return handlers[intent](query)
+        case _:
+            return f"Unknown Error"
