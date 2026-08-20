@@ -38,3 +38,6 @@ Find a plot that gets full sun.
 Show me all unrented plots.
 I want to lease Plot-102.
 Where can I pick a plot to rent.
+Radish
+Carrot
+Plot 5

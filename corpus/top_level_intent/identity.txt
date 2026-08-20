@@ -38,3 +38,9 @@ Please reset my name.
 Change my display name.
 Can you forget my old name and call me
 I want to edit my name.
+John
+Bob
+Alice
+Sarah
+Jesh
+Professor

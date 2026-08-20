@@ -6,7 +6,8 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
-import scikit_posthocs as sp
+from urllib import request
+# import scikit_posthocs as sp
 
 from collections import defaultdict
 
@@ -106,6 +107,34 @@ def load_text_corpus(root_path):
 
     return X, y
 
+emotion_map = {
+    "anger": "negative",
+    "fear": "negative",
+    "sadness": "negative",
+    "joy": "positive",
+    "love": "positive",
+    "surprise": "positive",
+    "neutral": "neutral"
+}
+
+required_columns = ["text", "label_name", "language", "is_label_conflict"]
+
+def load_open_corpus(url, local_file_path):
+    if not os.path.exists(local_file_path):
+        print("Downloading dataset")
+        request.urlretrieve(url, local_file_path)
+
+    df = pd.read_parquet(local_file_path)
+    df = df.dropna(subset=required_columns)
+    df = df[df["text"].astype(str).str.strip() != ""]
+    if "language" in df.columns and "is_label_conflict" in df.columns:
+        df = df[(df["language"] == "en") & (~df["is_label_conflict"])]
+
+    X = df["text"].astype(str)
+    y = df["label_name"].map(emotion_map)
+
+    return X, y
+
 def train_test(root_path, dump_path):
     X, y = load_text_corpus(root_path)
 
@@ -162,8 +191,12 @@ def train_test(root_path, dump_path):
 
     return scores_dict
 
-def train(root_path, dump_path):
-    X, y = load_text_corpus(root_path)
+def train(inputX, inputy, root_path, dump_path):
+    if root_path:
+        X, y = load_text_corpus(root_path)
+    else:
+        X = inputX
+        y = inputy
 
     pipeline = make_pipeline(TfidfVectorizer(tokenizer=stemmed_words, token_pattern=None, ngram_range=(1,2), use_idf=True, sublinear_tf=True), LinearSVC())
 
@@ -198,12 +231,12 @@ def eval(scores_dict, output_path):
         if p < 0.05:
             f.write("There is a significant difference between the models' performance.\n\n")
 
-            posthoc_results = sp.posthoc_dunn(scores_dict, p_adjust='holm')
-            csv_path = os.path.join(output_path, 'posthoc_dunn_results.csv')
-            posthoc_results.to_csv(csv_path, index=True)
+            # posthoc_results = sp.posthoc_dunn(scores_dict, p_adjust='holm')
+            # csv_path = os.path.join(output_path, 'posthoc_dunn_results.csv')
+            # posthoc_results.to_csv(csv_path, index=True)
 
-            f.write("\nPost-hoc Dunn's test results:\n")
-            f.write(posthoc_results.to_string())
+            # f.write("\nPost-hoc Dunn's test results:\n")
+            # f.write(posthoc_results.to_string())
         else:
             f.write("There is no significant difference between the models' performance.")
 
@@ -221,4 +254,8 @@ if __name__ == "__main__":
     #print("Building inverted index")
     #index = build_inverted_index(corpus)
     #dump(index, dump_path)
-    train(root_path="corpus/identity", dump_path="dumps/identity_intent_pipeline.joblib")
+    print("Loading corpus")
+    X, y = load_open_corpus("https://huggingface.co/datasets/ma2za/many_emotions/blob/main/data/sample/sample.parquet", "corpus/smalltalk/many_emotions_sample.parquet")
+
+    print("training")
+    train(inputX=X, inputy=y, root_path=None, dump_path="dumps/sentiment_analysis_pipeline.joblib")

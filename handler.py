@@ -187,6 +187,7 @@ def handle_update_name(name):
 def route_identity_intent(query):
     state = conversation_context["state"]
     intent = predict_identity_intent(query) if state == "idle" else None
+    print(f" identity         {state} {intent}")
 
     match (state, intent):
         case ("awaiting_name", _):
@@ -254,7 +255,7 @@ def handle_view_transactions():
     if not plantings:
         return "Plotbot: You have no active plantings!"
 
-    lines = [f" - Plot #{p[0]}: Crop:{p[1]} Planted: {p[4]}, Harvest: {p[5]}, £{p[3]}/mo" for p in plantings]
+    lines = [f" - Plot #{p[0]} - Crop: {p[1]} - Planted: {p[4]} - Harvest: {p[5]} - Fee: £{p[3]}/mo" for p in plantings]
     return "Plotbot: Your current active bookings:\n" + "\n".join(lines)
 
 def handle_filter_options(query):
@@ -347,7 +348,7 @@ def handle_selection(query):
                 return prompt
             matching_plots = get_available_plots(crop_name=crop[1])
             plots_str = "\n".join([f" - Plot #{p[0]}: {p[1]}sqm, £{p[4]}/mo" for p in matching_plots])
-            return f"Plotbot: Selected Crop: {crop[1]}.\nSuitable plots for this crop: {plots_str}.\nWhich plot would you like?"
+            return f"Plotbot: Selected Crop: {crop[1]}.\nSuitable plots for this crop:\n{plots_str}.\nWhich plot would you like?"
 
     return "Plotbot: Please select a valid plot number (e.g. 'Plot 1') or crop name (e.g. 'Tomato')."
 
@@ -363,12 +364,12 @@ def handle_view_options():
     return (
         f"Plotbot: Welcome to Plot Bookings!\n"
         f"Available Plots:\n{plot_str}\n"
-        f"Available Crops:\n - {crop_str}...\n"
+        f"Available Crops:\n - {crop_str}\n"
         f"You can:\n"
-        f"- Filter plots (e.g. 'Show cheap plots where I can plant tomatoes' or 'Show plots with loam soil')\n"
-        f"- Filter crops (e.g. 'Show crops I can plant in plot 5' or 'Show crops that need partial shade'\n"
-        f"- Select directly (e.g. 'Select Plot 2' or 'I want to plant apples')"
-        f"- Cancel transaction (e.g 'cancel')"
+        f"- Filter plots       e.g. 'Show cheap plots where I can plant tomatoes' or 'Show plots with loam soil'\n"
+        f"- Filter crops       e.g. 'Show crops I can plant in plot 5' or 'Show crops that need partial shade'\n"
+        f"- Select directly    e.g. 'Select Plot 2' or 'I want to plant apples'\n"
+        f"- Cancel transaction e.g 'cancel'"
     )
 
 def route_transaction_intent(query):
@@ -391,6 +392,8 @@ def route_transaction_intent(query):
             return handle_view_options()
         case("idle", "view_transactions"):
             return handle_view_transactions()
+        case _:
+            return f"Dont know {state} {intent}"
             
                         
 # train transaction classifier and test. can use similar keyword extraction and flow to identity
@@ -437,9 +440,9 @@ def route_top_level_intent(query):
 handlers = {
     "identity": route_identity_intent,
     "discoverability": discoverability,
-    "questionanswer": handle_question_answer,
+    "question_answer": handle_question_answer,
     "transaction": route_transaction_intent,
-    "smalltalk": handle_small_talk,
+    "small_talk": handle_small_talk,
     "request_name": handle_request_name,
     "change_name": handle_change_name,
 }
