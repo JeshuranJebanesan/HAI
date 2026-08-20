@@ -13,6 +13,7 @@ def main():
         # append plotbot: to each newline or if multiline sentence e.g plot viewings, pad front spaces
 
         if response == "terminate":
+            print("Bye, bye!")
             break
 
         print(response)

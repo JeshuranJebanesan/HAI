@@ -92,6 +92,10 @@ response_templates = {
 
     # Discoverability
 
+    "discoverability": [
+        "I'm built to help you rent plots and plant crops. But you can also ask me general questions, make small talk and even change your name!\nPlotbot: Example phrases you can use are \"I want to rent a plot\", \"how are you\", \"help me\" and \"exit\"."
+    ],
+
     # Transaction
 
     "cancel_transaction": [
@@ -150,6 +154,39 @@ response_templates = {
     "view_options": [
         "Welcome to Plot Bookings!\n\n Available Plots:\n{plot_str}\n\n Available Crops:\n- {crop_str}\n\nYou can:\n- Filter plots       e.g. 'Show cheap plots where I can plant tomatoes'\n- Filter crops       e.g. 'Show crops I can plant in plot 5'\n- Select directly    e.g. 'Select Plot 2'\n- Cancel transaction e.g 'cancel'"
     ],
+
+    # Small Talk
+
+    "positive": [
+        "I'm {a:glad} to hear it {name}!",
+        "Sounds {a:wonderful}. I hope it keeps up!",
+        "Cool beans :)"
+    ],
+    "negative": [
+        "That sounds tough. Keep your head up {name}.",
+        "I believe in you {name}. You got this.",
+        "I'm sorry to hear that. I just know you'll get over this {r:valiantly}."
+    ],
+    "neutral": [
+        "Okay, understood."
+        "Fair enough."
+        "Chill."
+    ],
+    "weather": [
+        "It's always sunny in Philadelphia!",
+        "I heard there will be {a:unbearable} rain later today.\n\n Good thing I love jumping in muddy puddles!",
+        "OH MY GOSH THERE'S A SOLAR ECLIPSE!!!"
+    ],
+    "greeting": [
+        "{greet} {name}! What can I do you for?"
+        "{greet}. Nice to see you today {name}!"
+        "Well, well, well. I've been expecting you {name}...\n\n How can I help you today >:)"
+    ],
+    "wellbeing": [
+        "I'm feeling {a:positive}, thanks for asking. How are you?",
+        "I'm doing great {name}. What about you?",
+        "It's a {a:simple} life being a transactional, conversational plot booking chatbot.\n\n Not a {n:worry} in the world!\n\n How is it on the other side of the screen?"
+    ]
 }
 
 def generate_response(key, **kwargs):

@@ -389,9 +389,9 @@ def route_transaction_intent(query):
             return handle_filter_options(query)
         case("in_transaction", "selection"):
             return handle_selection(query)
-        case("idle", "view_options"):
+        case("idle" | "wellbeing_response", "view_options"):
             return handle_view_options()
-        case("idle", "view_transactions"):
+        case("idle" | "wellbeing_response", "view_transactions"):
             return handle_view_transactions()
         case _:
             return f"Dont know {state} {intent}"
@@ -413,13 +413,30 @@ def predict_sentiment(query):
         load_small_talk_pipelines()
     return sentiment_analysis_pipeline.predict([query])[0]
 
+def handle_wellbeing_response(query):
+    conversation_context["state"] = "idle"
+    sentiment = predict_sentiment(query)
+    return generate_response(sentiment)
+
+def handle_wellbeing():
+    conversation_context["state"] = "wellbeing_response"
+    return generate_response("wellbeing")
+
+def handle_weather():
+    return generate_response("weather")
+
+def handle_greetings():
+    return generate_response("greeting")
+
 def route_small_talk_intent(query):
     state = conversation_context["state"]
     intent = predict_small_talk_intent(query)
 
     match (state, intent):
         case("wellbeing_response", _):
-            return 
+            return handle_wellbeing_response(query)
+        case(_, intent):
+            handlers[intent](query)
 
 ### Top Level Intent
 
@@ -438,7 +455,6 @@ def predict_top_level_intent(query):
 def route_top_level_intent(query):
     state = conversation_context["state"]
     intent = predict_top_level_intent(query)
-    print(state, intent)
 
     match (state, intent):
         case ("awaiting_name", _):
@@ -447,7 +463,7 @@ def route_top_level_intent(query):
             return intent
         case("selecting_option" | "in_transaction" | "confirming_transaction", _):
             return route_transaction_intent(query)
-        case("idle", _):
+        case("idle" | "wellbeing_response", _):
             return handlers[intent](query)
         case _:
             return f"Plotbot: Sorry, I didn't really understand that {state, intent}."
@@ -461,4 +477,7 @@ handlers = {
     "small_talk": route_small_talk_intent,
     "request_name": handle_request_name,
     "change_name": handle_change_name,
+    "greetings": handle_greetings,
+    "wellbeing": handle_wellbeing,
+    "weather": handle_weather,
 }

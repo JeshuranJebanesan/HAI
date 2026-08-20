@@ -258,5 +258,4 @@ if __name__ == "__main__":
     #print("Loading corpus")
     #X, y = load_open_corpus()
     #print("training")
-    #train(inputX=X, inputy=y, root_path=None, dump_path="dumps/sentiment_analysis_pipeline.joblib")
-    print("hi")
+    train(inputX=None, inputy=None, root_path="corpus/small_talk", dump_path="dumps/small_talk_intent_pipeline.joblib")
