@@ -11,6 +11,7 @@ from joblib import load
 from collections import defaultdict
 
 from db_manager import create_user, update_user_name, get_available_crops, get_user_plantings, create_planting, get_available_plots
+from response import generate_response
 
 # nltk.download('stopwords', quiet=True)
 
@@ -42,6 +43,8 @@ top_level_intent_pipeline = None
 qa_inverted_index = None
 identity_intent_pipeline = None
 transaction_intent_pipeline = None
+sentiment_analysis_pipeline = None
+small_talk_intent_pipeline = None
 
 def load_top_level_intent_pipeline():
     global top_level_intent_pipeline
@@ -58,6 +61,11 @@ def load_identity_intent_pipeline():
 def load_transaction_intent_pipeline():
     global transaction_intent_pipeline
     transaction_intent_pipeline = load("dumps/transaction_intent_pipeline.joblib")
+
+def load_small_talk_pipelines():
+    global sentiment_analysis_pipeline, small_talk_intent_pipeline
+    sentiment_analysis_pipeline = load("dumps/sentiment_analysis_pipeline.joblib")
+    small_talk_intent_pipeline = load("dumps/small_talk_intent_pipeline.joblib")
 
 ### Question Answer
 
@@ -89,7 +97,7 @@ def search_query(query, index_data, confidence_threshold=0.1):
     if q_norm == 0.0:
         # this is fallback by warning message
         # if there's time can switch to fallback by query expansion
-        return "Sorry, I don't understand. Could you rephrase your question?"
+        return generate_response("qa_fail")
 
     scores = defaultdict(float)
     for term, q_weight in q_vector.items():
@@ -105,15 +113,15 @@ def search_query(query, index_data, confidence_threshold=0.1):
     best_doc_id, best_score = sorted(scores.items(), key=lambda x: x[1], reverse=True)[0]
 
     if best_score < confidence_threshold:
-        return "Sorry, I don't understand. Could you rephrase your question?"
+        return generate_response("qa_fail")
 
-    return corpus[best_doc_id]['answers']
+    return generate_response("qa_success")
 
 def handle_question_answer(query):
     if qa_inverted_index is None:
         load_qa_inverted_index()
     answer = search_query(query, qa_inverted_index)
-    return f"Plotbot: {answer}"
+    return answer
 
 ### Identity
 
@@ -402,8 +410,23 @@ def route_transaction_intent(query):
 
 ### Smalltalk
 
-def handle_small_talk():
-    return
+def predict_small_talk_intent(query):
+    if small_talk_intent_pipeline is None:
+        load_small_talk_pipelines()
+    return small_talk_intent_pipeline.predict([query])[0]
+
+def predict_sentiment(query):
+    if sentiment_analysis_pipeline is None:
+        load_small_talk_pipelines()
+    return sentiment_analysis_pipeline.predict([query])[0]
+
+def route_small_talk_intent(query):
+    state = conversation_context["state"]
+    intent = predict_small_talk_intent(query)
+
+    match (state, intent):
+        case("wellbeing_response", _):
+            return 
 
 ### Top Level Intent
 
@@ -442,7 +465,7 @@ handlers = {
     "discoverability": discoverability,
     "question_answer": handle_question_answer,
     "transaction": route_transaction_intent,
-    "small_talk": handle_small_talk,
+    "small_talk": route_small_talk_intent,
     "request_name": handle_request_name,
     "change_name": handle_change_name,
 }
