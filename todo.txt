@@ -30,7 +30,10 @@ should clean query and then send to intentrouters
 maybe a problem if different cleaning needed e.g stopwords perform worse on transactions but better on questionanswer
 
 transactions
+discoverability for each state
 confirmation/cancel
 aggregation
 doc
 video
+
+getplots should return available plots

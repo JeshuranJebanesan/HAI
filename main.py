@@ -1,4 +1,4 @@
-from handler import route_intent
+from handler import route_top_level_intent
 from db_manager import reset_database
 
 def main():
@@ -8,7 +8,9 @@ def main():
 
     while True:
         query = input("You: ")
-        response = route_intent(query)
+        response = route_top_level_intent(query)
+        # have a response code. can include nlg or templates depending. lookup the code and find random response unless generated
+        # append plotbot: to each newline or if multiline sentence e.g plot viewings, pad front spaces
 
         if response == "terminate":
             break

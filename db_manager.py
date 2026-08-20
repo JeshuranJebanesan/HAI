@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from datetime import date
+from datetime import timedelta, date
 
 def get_connection():
     return sqlite3.connect("database/transaction.db")
@@ -122,7 +122,7 @@ def seed_database():
     conn.commit()
     conn.close()
 
-def get_available_plots(soil_type=None, crop_name=None, sort_by=None):
+def get_available_plots(soil=None, sun=None, crop_name=None, sort_by=None):
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -134,40 +134,71 @@ def get_available_plots(soil_type=None, crop_name=None, sort_by=None):
     """
     params = []
 
-    if soil_type:
-        query += " AND LOWER(p.soil_type) = LOWER(?)"
-        params.append(soil_type)
-
     if crop_name:
-        query += """ AND LOWER(p.soil_type) = (
-            SELECT LOWER(ideal_soil) FROM crops WHERE LOWER(name) = LOWER(?)
-        )"""
+        query = """
+            SELECT p.plot_id, p.size_sqm, p.soil_type, p.sun_exposure, p.monthly_fee
+            FROM plots p
+            LEFT JOIN plantings pl ON p.plot_id = pl.plot_id
+            JOIN crops c ON LOWER(p.soil_type) = LOWER(c.ideal_soil)
+                        AND LOWER(p.sun_exposure) = LOWER(c.sun_requirements)
+            WHERE pl.plot_id IS NULL
+              AND LOWER(c.name) = LOWER(?)
+        """
         params.append(crop_name)
-
-    if sort_by == "cheapest":
+    else:
+        if soil:
+            query += " AND LOWER (p.soil_type) = LOWER(?)"
+            params.append(soil)
+        if sun:
+            query += " AND LOWER(p.sun_exposure) = LOWER(?)"
+            params.append(sun)
+    
+    if sort_by == "price_asc":
         query += " ORDER BY p.monthly_fee ASC"
-    elif sort_by == "size":
+    elif sort_by == "price_desc":
+        query += " ORDER BY p.monthly_fee DESC"
+    elif sort_by == "size_desc":
         query += " ORDER BY p.size_sqm DESC"
+    elif sort_by == "size_asc":
+        query += " ORDER BY p.size_sqm ASC"
 
     cursor.execute(query, params)
     rows = cursor.fetchall()
     conn.close()
     return rows
 
-def get_available_crops_for_plot(plot_id):
+def get_available_crops(plot_id=None, sun=None, soil=None):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT c.crop_id, c.name, c.ideal_soil, c.sun_requirements
-        FROM crops c
-        JOIN plots p ON LOWER(c.ideal_soil) = LOWER(p.soil_type)
-        WHERE p.plot_id = ?;
-    """, (plot_id,))
+    query = """
+        SELECT crop_id, name, ideal_soil, sun_requirements
+        FROM crops
+        WHERE 1=1
+    """
+    params = []
 
-    crops = cursor.fetchall()
+    if plot_id:
+        query = """
+            SELECT c.crop_id, c.name, c.ideal_soil, c.sun_requirements
+            FROM crops c
+            JOIN plots p ON LOWER(c.ideal_soil) = LOWER(p.soil_type)
+                        AND LOWER(c.sun_requirements) = LOWER(p.sun_exposure)
+            WHERE p.plot_id = ?
+        """
+        params.append(plot_id)
+    else:
+        if soil:
+            query += " AND LOWER(ideal_soil) = LOWER(?)"
+            params.append(soil)
+        if sun:
+            query += " AND LOWER(sun_requirements) = LOWER(?)"
+            params.append(sun)
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
     conn.close()
-    return crops
+    return rows
 
 def get_user_plantings(user_id):
     conn = get_connection()
@@ -186,13 +217,12 @@ def get_user_plantings(user_id):
     return rows
 
 def create_planting(plot_id, crop_id, renter_id):
-    """Record a plot transaction in the database."""
     conn = get_connection()
     cursor = conn.cursor()
 
     today = date.today().strftime("%Y-%m-%d")
     # Default harvest date set to 6 months ahead
-    harvest = date.today().replace(month=(date.today().month + 6) % 12 or 12).strftime("%Y-%m-%d")
+    harvest = (date.today() + timedelta(days=180)).strftime("%Y-%m-%d")
 
     cursor.execute("""
         INSERT INTO plantings (plot_id, crop_id, renter_id, planted_date, harvest_date)

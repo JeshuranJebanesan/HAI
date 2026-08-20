@@ -10,7 +10,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from joblib import load
 from collections import defaultdict
 
-from db_manager import create_user, update_user_name, get_available_crops_for_plot, get_user_plantings, create_planting, get_available_plots
+from db_manager import create_user, update_user_name, get_available_crops, get_user_plantings, create_planting, get_available_plots
 
 # nltk.download('stopwords', quiet=True)
 
@@ -150,41 +150,6 @@ def predict_identity_intent(query):
         load_identity_intent_pipeline()
     return identity_intent_pipeline.predict([query])[0]
 
-def handle_identity_query(query):
-    if conversation_context["state"] == "awaiting_name":
-        name = name_catch(query)
-        if name:
-            conversation_context["state"] = "idle"
-            if not conversation_context["name"]:
-                conversation_context["name"] = name
-                user_id = create_user(name)
-                conversation_context["user_id"] = user_id
-                return f"Plotbot: Nice to meet you {name}!\nPlotbot: I'm here to help you rent plots and plant crops. Ask me if you want any help or type 'exit' to quit."
-            else:
-                user_id = conversation_context["user_id"]
-                conversation_context["name"] = name
-                update_user_name(user_id, name)
-                return f"Plotbot: Cool! Your name has been updated to {name}."
-        return "Plotbot: Sorry I didn't get that. Could you tell me your name again (e.g 'Alice')."
-
-    sub_intent = predict_identity_intent(query)
-
-    if sub_intent == "request_name":
-        name = conversation_context["name"]
-        return f"Your name is {name}!"
-    elif sub_intent == "change_name":
-        name = name_catch(query)
-        if name and name.lower() != conversation_context["name"].lower():
-            user_id = conversation_context["user_id"]
-            conversation_context["name"] = name
-            update_user_name(user_id, name)
-            return f"Plotbot: Updated! Your name is now {name}."
-        else:
-            conversation_context["state"] = "awaiting_name"
-            return f"Plotbot: Sure thing! What would you like to change your name to?"
-
-    return "Plotbot: Sorry, I didn't really understand that."
-
 def handle_name_capture(query):
     name = name_catch(query)
     if not name:
@@ -200,6 +165,14 @@ def handle_request_name(query):
     name = conversation_context["name"]
     return f"Plotbot: Your name is {name}!"
 
+def handle_change_name(query):
+    name = name_catch(query)
+    if name and name.lower() != conversation_context["name"].lower():
+        return handle_update_name(name)
+
+    conversation_context["state"] = "awaiting_name"
+    return f"Plotbot: Sure thing! What would you like to change your name to?"
+    
 def handle_set_name(name):
     conversation_context["name"] = name
     conversation_context["user_id"] = create_user(name)
@@ -232,161 +205,193 @@ def discoverability(query):
 
 ### Transactions
 
+# classify this if time
+soil_types = ["clay", "loam", "sandy"]
+sun_types = ["full sun", "partial shade", "shade"]
+sort_types = [
+    (("cheap", "lowest", "low", "cheapest", "price"), "price_asc"),
+    (("expensive", "high", "highest"), "price_desc"),
+    (("biggest", "big", "large", "largest", "size"), "size_desc"),
+    (("smallest", "small", "tiny"), "size_asc")
+]
+crop_types = ["tomato", "carrot", "lettuce", "potato", "spinach", "mint", "cabbage", "onion", "radish", "green bean", "swiss chard", "peas", "kale", "zucchini", "cucumber", "pumpkin", "broccoli", "cauliflower", "brussels sprout", "asparagus"]
+
 def predict_transaction_intent(query):
     if transaction_intent_pipeline is None:
         load_transaction_intent_pipeline()
     return transaction_intent_pipeline.predict([query])[0]
 
-def reset_transaction_context():
+def plot_catch(query):
+    q = query.lower()
+    soil = next((s for s in soil_types if s in q), None)
+    sun = next((s for s in sun_types if s in q), None)
+    crop_name = next((s for s in crop_types if s in q), None)
+    sort_by = next(
+        (s for keywords, s in sort_types if any(kw in q for kw in keywords)), None
+    )
+
+    return soil, sun, crop_name, sort_by
+
+def crop_catch(query):
+    q = query.lower()
+    soil = next((s for s in soil_types if s in q), None)
+    sun = next((s for s in sun_types if s in q), None)
+    plot_match = re.search(r'plot\s*(\d+)', q)
+    plot_id = int(plot_match.group(1)) if plot_match else None
+
+    return plot_id, sun, soil
+
+def handle_cancel_transaction():
     conversation_context["transaction"] = {
         "selected_plot": None,
         "selected_crop": None
     }
     conversation_context["state"] = "idle"
+    return "Plotbot: The booking has been cancelled."
 
-def format_plot_list(plots):
-    if not plots:
-        return "No available plots found matching your criteria."
-    res = "Plots:\n"
-    for p in plots:
-        res += f" - Plot #{p[0]}: {p[1]} sqm, {p[2]} soil, {p[3]} sun (£{p[4]}/mo)\n"
-    return res.strip()
+def handle_view_transactions():
+    plantings = get_user_plantings(conversation_context["user_id"])
+    if not plantings:
+        return "Plotbot: You have no active plantings!"
 
-def plot_catch(query):
-    match = re.search(r'\b(\d+)\b', query)
-    return int(match.group(1)) if match else None
+    lines = [f" - Plot #{p[0]}: Crop:{p[1]} Planted: {p[4]}, Harvest: {p[5]}, £{p[3]}/mo" for p in plantings]
+    return "Plotbot: Your current active bookings:\n" + "\n".join(lines)
 
-def crop_catch(query, available_crops):
-    query_lower = query.lower()
-    for crop in available_crops:
-        if crop[1].lower() in query_lower:
-            return crop
+def handle_filter_options(query):
+    q = query.lower()
+
+    match = re.search(r'\b(plot|crop)s?\b', query.lower())
+    first_keyword = match.group(1) if match else None
+
+    if first_keyword == "crop":
+        plot_id, sun, soil = crop_catch(q)
+        table = get_available_crops(plot_id, sun, soil)
+        if not table:
+            return "Plotbot: No crops match those criteria!"
+        crop_list = "\n".join([f" - {c[1]} (Soil: {c[2]}, Sun: {c[3]})" for c in table])
+        return f"Plotbot: These crops match your criteria\n{crop_list}"
+    elif first_keyword == "plot":
+        soil, sun, crop_name, sort_by = plot_catch(q)
+        table = get_available_plots(soil, sun, crop_name, sort_by)
+        if not table:
+            return "Plotbot: No plots match those criteria!"
+        plot_list = "\n".join([f" - Plot #{p[0]}: {p[1]}sqm | {p[2]} soil | {p[3]} | ${p[4]}/mo" for p in table])
+        return f"Plotbot: These plots match your criteria\n{plot_list}"
+
+    return "Plotbot: I didn't understand. For crops, try 'Show crops where ...' and for plots, try 'Show plots where ...'"
+
+def handle_confirmation(query):
+    q = query.lower()
+    tx = conversation_context["transaction"]
+
+    if any(kw in q for kw in ["yes", "confirm", "proceed"]):
+        create_planting(tx["selected_plot"], tx["selected_crop"][0], conversation_context["user_id"])
+        handle_cancel_transaction()
+        return "Plotbot: Transaction successfully confirmed!"
+    elif any(kw in q for kw in ["cancel", "leave", "exit"]):
+        return handle_cancel_transaction()
+    elif "change plot" in q:
+        tx["selected_plot"] = None
+        conversation_context["state"] = "in_transaction"
+        return f"Plotbot: Plot selection cleared\n{handle_selection(tx['selected_crop'][1])}"
+    elif "change crop" in q:
+        tx["selected_crop"] = None
+        conversation_context["state"] = "in_transaction"
+        plot_str = f"Plot {tx['selected_plot']}"
+        return f"Plotbot: Crop selection cleared\n{handle_selection(plot_str)}"
+    else:
+        return "Plotbot: Sorry, I didn't get that. Type 'yes', 'cancel', 'change plot' or 'change crop'"
+
+def can_confirm():
+    tx = conversation_context["transaction"]
+    if tx["selected_plot"] and tx["selected_crop"]:
+        conversation_context["state"] = "confirming_transaction"
+        return (
+            f"Plotbot: Selection Complete!\n"
+            f"- Selected Plot: #{tx['selected_plot']}\n"
+            f"- Selected Crop: {tx['selected_crop'][1]}\n"
+            f"Would you like to confirm? (Type 'yes', 'cancel', 'change plot' or 'change crop')"
+        )
     return None
 
-def handle_rent_plot(query):
-    conversation_context["state"] = "selecting_plot"
-    plots = get_available_plots()
-    return f"Plotbot: Let's rent a plot!\n{format_plot_list(plots)}\nWhich plot ID would you like to rent?"
-
-def handle_view_plots(query):
-    return
-
-def handle_filter_plots(query):
-    query_lower = query.lower()
-    soil_type = None
-    crop_name = None
-    sort_by = None
-
-    if "cheapest" in query_lower or "cheap" in query_lower:
-        sort_by = "cheapest"
-    
-    for soil in ["loam", "clay", "sandy"]:
-        if soil in query_lower:
-            soil_type = soil
-            break
-
-    for crop in ["tomato", "carrot", "lettuce", "potato", "spinach", "mint"]:
-        if crop in query_lower:
-            crop_name = crop
-            break
-
-    plots = get_available_plots(soil_type=soil_type, crop_name=crop_name, sort_by=sort_by)
-    return f"Plotbot: Here are the matching plots:\n{format_plot_list(plots)}\nWhich plot ID would you like to choose?"
-
-def handle_transaction_query(query):
+def handle_selection(query):
+    q = query.lower()
     tx = conversation_context["transaction"]
-    state = conversation_context["state"]
-    user_id = conversation_context["user_id"]
+    conversation_context["state"] = "selecting_option"
 
-    if state == "selecting_plot":
-        plot_match = re.search(r'\b(\d+)\b', query)
-        if plot_match:
-            plot_id = int(plot_match.group(1))
-            tx["selected_plot"] = plot_id
-            tx["state"] = "selecting_crop"
+    #valid plot num
+    plot_match = re.search(r'plot\s*(\d+)', q)
+    if plot_match:
+        plot_id = int(plot_match.group(1))
 
-            crops = get_available_crops_for_plot(plot_id)
-            crop_names = ", ".join([c[1] for c in crops]) if crops else "Any standard crop"
-            
-            return (f"Plotbot: Selected Plot #{plot_id}.\n"
-                    f"Which crop would you like to plant? Suitable crops for this plot: {crop_names}")
-        
-        sub_intent = predict_plot_intent(query)
-        if sub_intent == "filter_plots":
-            return handle_plot_filtering(query)
+        available_plots = get_available_plots()
+        available_ids = [p[0] for p in available_plots]
 
-        return "Plotbot: Please select a valid Plot ID number (e.g., '10') or type 'cancel'."
+        if plot_id not in available_ids:
+            return f"Plotbot: Plot #{plot_id} is either invalid or currently occupied. Please choose an available plot."
 
-    elif step == "selecting_crop":
-        crops = get_available_crops_for_plot(tx["selected_plot"])
-        selected_crop = None
-        
-        for c in crops:
-            if c[1].lower() in query.lower():
-                selected_crop = c
-                break
+        tx["selected_plot"] = plot_id
+        prompt = can_confirm()
+        if prompt: 
+            return prompt
+        matching_crops = get_available_crops(plot_id=plot_id)
+        crops_str = ", ".join([c[1] for c in matching_crops])
+        return f"Plotbot: Selected Plot #{plot_id}. Suitable crops for this plot: {crops_str}. Which crop would you like?"
 
-        if selected_crop:
-            tx["selected_crop"] = selected_crop
-            tx["step"] = "confirming"
-            return (f"Plotbot: Confirm rental of Plot #{tx['selected_plot']} "
-                    f"planting '{selected_crop[1]}'? (Type 'yes' to confirm or 'no' to cancel)")
-        
-        return "Plotbot: Please choose a valid crop from the recommended list or type 'cancel'."
+    all_crops = get_available_crops()
+    for crop in all_crops:
+        if crop[1].lower() in q:
+            tx["selected_crop"] = (crop[0], crop[1])
+            prompt = can_confirm()
+            if prompt: 
+                return prompt
+            matching_plots = get_available_plots(crop_name=crop[1])
+            plots_str = "\n".join([f" - Plot #{p[0]}: {p[1]}sqm, £{p[4]}/mo" for p in matching_plots])
+            return f"Plotbot: Selected Crop: {crop[1]}.\nSuitable plots for this crop: {plots_str}.\nWhich plot would you like?"
 
-    elif step == "confirming":
-        if "yes" in query.lower() or "confirm" in query.lower():
-            plot_id = tx["selected_plot"]
-            crop_id = tx["selected_crop"][0]
-            
-            create_planting(plot_id, crop_id, user_id)
-            reset_transaction_context()
-            return f"Plotbot: Success! Plot #{plot_id} has been rented and planted."
-        else:
-            reset_transaction_context()
-            return "Plotbot: Transaction cancelled."
+    return "Plotbot: Please select a valid plot number (e.g. 'Plot 1') or crop name (e.g. 'Tomato')."
 
-    sub_intent = predict_plot_intent(query)
+def handle_view_options():
+    conversation_context["state"] = "in_transaction"
+    plots = get_available_plots()
+    crops = get_available_crops()
 
-    if sub_intent == "view_plots":
-        plantings = get_user_plantings(user_id)
-        if not plantings:
-            return "Plotbot: You are not currently renting any plots."
-        msg = "Plotbot: Your current plots:\n"
-        for p in plantings:
-            msg += f" - Plot #{p[0]}: Planted with {p[1]} ({p[2]} soil, ${p[3]}/mo)\n"
-        return msg
+    # nlg this
+    plot_str = "\n".join([f" - Plot #{p[0]}: {p[1]}sqm | {p[2]} soil | {p[3]} | £{p[4]}/mo" for p in plots])
+    crop_str = ", ".join([c[1] for c in crops])
 
-    elif sub_intent == "rent_plot":
-        tx["step"] = "selecting_plot"
-        plots = get_available_plots()
-        return f"Plotbot: Let's rent a plot!\n{format_plot_list(plots)}\nWhich plot ID would you like to rent?"
-
-    elif sub_intent == "filter_plots":
-        return handle_plot_filtering(query)
-
-    return "Plotbot: I didn't understand your plot request."
+    return (
+        f"Plotbot: Welcome to Plot Bookings!\n"
+        f"Available Plots:\n{plot_str}\n"
+        f"Available Crops:\n - {crop_str}...\n"
+        f"You can:\n"
+        f"- Filter plots (e.g. 'Show cheap plots where I can plant tomatoes' or 'Show plots with loam soil')\n"
+        f"- Filter crops (e.g. 'Show crops I can plant in plot 5' or 'Show crops that need partial shade'\n"
+        f"- Select directly (e.g. 'Select Plot 2' or 'I want to plant apples')"
+        f"- Cancel transaction (e.g 'cancel')"
+    )
 
 def route_transaction_intent(query):
     state = conversation_context["state"]
     intent = predict_transaction_intent(query)
-    user_id = conversation_context["user_id"]
-    tx = conversation_context["transaction"]
 
-    print(intent)
-
-    match state:
-        case ("selecting_plot", cancel):
-        case ("selecting_plot", filter):
-        case ("selecting_plot", _):
-
-        case ("selecting_crop", cancel):
-        case ("selecting_crop", _):
-
-        case ("confirming_transaction", _):
-
-        case("idle, _"):
-                
+    # use text generation for training docs e.g i want to change {crop name}
+    match (state, intent):
+        case(_, "cancel"):
+            return handle_cancel_transaction()
+        case("confirming_transaction", _):
+            return handle_confirmation(query)
+        case("selecting_option", _):
+            return handle_selection(query)
+        case("in_transaction", "filter_options"):
+            return handle_filter_options(query)
+        case("in_transaction", "selection"):
+            return handle_selection(query)
+        case("idle", "view_options"):
+            return handle_view_options()
+        case("idle", "view_transactions"):
+            return handle_view_transactions()
+            
                         
 # train transaction classifier and test. can use similar keyword extraction and flow to identity
 # need to form templates and ontology using database and can implement general discoverability from there
@@ -413,28 +418,28 @@ def predict_top_level_intent(query):
 
 def route_top_level_intent(query):
     state = conversation_context["state"]
-    intent = predict_top_level_intent(query) if state == "idle" else None
+    intent = predict_top_level_intent(query)
     print(state, intent)
 
     match (state, intent):
         case ("awaiting_name", _):
-            return handle_identity_query(query)
+            return route_identity_intent(query)
         case (_, "terminate"):
             return intent
-        case("selecting_plot" | "selecting_crop | confirming_transaction", _):
-            return handle_transaction_query(query)
+        case("selecting_option" | "in_transaction" | "confirming_transaction", _):
+            return route_transaction_intent(query)
         case("idle", _):
             return handlers[intent](query)
         case _:
-            return f"Unknown Error"
+            return f"Plotbot: Sorry, I didn't really understand that {state, intent}."
 
+# inital traintest didnt keep underscores on qa and smalltalk. if time retrain with underscores for keys
 handlers = {
-    "identity": handle_identity_query,
+    "identity": route_identity_intent,
     "discoverability": discoverability,
     "questionanswer": handle_question_answer,
+    "transaction": route_transaction_intent,
     "smalltalk": handle_small_talk,
-    "transaction": handle_transaction_query,
-    "rent_plot": handle_rent_plot,
-    "view_plots": handle_view_plots,
-    "filter_plots": handle_filter_plots
+    "request_name": handle_request_name,
+    "change_name": handle_change_name,
 }

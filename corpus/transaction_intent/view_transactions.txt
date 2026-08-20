@@ -1,0 +1,20 @@
+View my transactions
+Show my bookings
+View active bookings
+Show my plantings
+What plots have I booked
+See my current bookings
+View my active plots
+Show my rental history
+List my bookings
+Show active transactions
+Check my plot bookings
+View my planted crops
+What am I currently renting
+Show my current plantings
+View my active transactions
+List my rented plots
+Check my active plantings
+Show my booked plots
+Ciew my rented plots
+See my active bookings

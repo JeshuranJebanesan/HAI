@@ -1,0 +1,46 @@
+Filter
+Show
+Which
+Size
+Sqm
+Soil
+Sandy
+Loam
+Clay
+Partial Shade
+Shade
+Full Sun
+Cheap
+Cheapest
+Low
+Lowest
+Expensive
+High
+Highest
+Big
+Biggest
+Large
+Largest
+Small
+Smallest
+Tiny
+Show plots where soil is loam
+Show crops that need partial shade
+Filter plots by cheap price
+Show crops I can plant in plot 5
+Show cheap plots where I can plant tomatoes
+Find plots with clay soil
+Show crops for plot 3
+Filter plots with full sun
+Show me small plots
+Find crops suitable for sandy soil
+Show plots for carrot
+Filter plots by size
+Show crops requiring full sun
+Show cheapest plots available
+Find plots for lettuce
+Show plots with shade
+Filter crops for plot 12
+Show largest available plots
+Search plots with loam soil and full sun
+Show crops matching plot 8
