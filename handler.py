@@ -113,9 +113,10 @@ def search_query(query, index_data, confidence_threshold=0.1):
     best_doc_id, best_score = sorted(scores.items(), key=lambda x: x[1], reverse=True)[0]
 
     if best_score < confidence_threshold:
-        return generate_response("qa_fail")
+        return generate_response("qa_low_confidence")
 
-    return generate_response("qa_success")
+    reply = corpus[best_doc_id]['answers']
+    return generate_response("qa_success", answer=reply)
 
 def handle_question_answer(query):
     if qa_inverted_index is None:
@@ -161,7 +162,7 @@ def predict_identity_intent(query):
 def handle_name_capture(query):
     name = name_catch(query)
     if not name:
-        return "Plotbot: Sorry I didn't get that. Could you tell me your name again (e.g 'Alice')."
+        return generate_response("identity_name_catch_failed")
 
     conversation_context["state"] = "idle"
     if conversation_context["name"]:
@@ -171,7 +172,7 @@ def handle_name_capture(query):
 
 def handle_request_name(query):
     name = conversation_context["name"]
-    return f"Plotbot: Your name is {name}!"
+    return generate_response("request_name")
 
 def handle_change_name(query):
     name = name_catch(query)
@@ -179,33 +180,28 @@ def handle_change_name(query):
         return handle_update_name(name)
 
     conversation_context["state"] = "awaiting_name"
-    return f"Plotbot: Sure thing! What would you like to change your name to?"
+    return generate_response("change_name")
     
 def handle_set_name(name):
     conversation_context["name"] = name
     conversation_context["user_id"] = create_user(name)
-    return f"Plotbot: Nice to meet you {name}!\nPlotbot: I'm here to help you rent plots and plant crops. Ask me if you want any help or type 'exit' to quit."
+    return generate_response("set_name")
 
 def handle_update_name(name):
     user_id = conversation_context["user_id"]
     conversation_context["name"] = name
     update_user_name(user_id, name)
-    return f"Plotbot: Cool! Your name has been updated to {name}."
+    return generate_response("update_name")
 
 def route_identity_intent(query):
     state = conversation_context["state"]
-    intent = predict_identity_intent(query) if state == "idle" else None
-    print(f" identity         {state} {intent}")
+    intent = predict_identity_intent(query) if state != "awaiting_name" else None
 
     match (state, intent):
         case ("awaiting_name", _):
             return handle_name_capture(query)
-
-        case ("idle", _):
-            return handlers[intent](query)
-
         case _:
-            return "Plotbot: Sorry, I didn't really understand that."
+            return handlers[intent](query)
 
 ### Discoverability
 
@@ -256,15 +252,15 @@ def handle_cancel_transaction():
         "selected_crop": None
     }
     conversation_context["state"] = "idle"
-    return "Plotbot: The booking has been cancelled."
+    return generate_response("cancel_transaction")
 
 def handle_view_transactions():
     plantings = get_user_plantings(conversation_context["user_id"])
     if not plantings:
-        return "Plotbot: You have no active plantings!"
+        return generate_response("view_transactions_empty")
 
-    lines = [f" - Plot #{p[0]} - Crop: {p[1]} - Planted: {p[4]} - Harvest: {p[5]} - Fee: £{p[3]}/mo" for p in plantings]
-    return "Plotbot: Your current active bookings:\n" + "\n".join(lines)
+    reply = "\n".join([f"- {f'Plot #{p[0]}':<10} | {f'Crop: {p[1]}':<20} | Planted: {p[4]} | Harvest: {p[5]} | {f'Fee: £{p[3]}/mo':>7}" for p in plantings])
+    return generate_response("view_transactions", lines = reply)
 
 def handle_filter_options(query):
     q = query.lower()
@@ -276,18 +272,18 @@ def handle_filter_options(query):
         plot_id, sun, soil = crop_catch(q)
         table = get_available_crops(plot_id, sun, soil)
         if not table:
-            return "Plotbot: No crops match those criteria!"
-        crop_list = "\n".join([f" - {c[1]} (Soil: {c[2]}, Sun: {c[3]})" for c in table])
-        return f"Plotbot: These crops match your criteria\n{crop_list}"
+            return generate_response("filter_crops_empty")
+        reply = "\n".join([f"- {f'{c[1]}':<20} | {f'Soil: {c[2]}':<20} | {f'Sun: {c[3]}':>20}" for c in table])
+        return generate_response("filter_crops_success", crop_list = reply)
     elif first_keyword == "plot":
         soil, sun, crop_name, sort_by = plot_catch(q)
         table = get_available_plots(soil, sun, crop_name, sort_by)
         if not table:
-            return "Plotbot: No plots match those criteria!"
-        plot_list = "\n".join([f" - Plot #{p[0]}: {p[1]}sqm | {p[2]} soil | {p[3]} | ${p[4]}/mo" for p in table])
-        return f"Plotbot: These plots match your criteria\n{plot_list}"
+            return generate_response("filter_plots_empty")
+        reply = "\n".join([f"- {f'Plot #{p[0]}':<10} | {f'{p[1]}sqm':<10} | {f'{p[2]} soil':<10} | {f'{p[3]}':<10} | {f'${p[4]}/mo':>7}" for p in table])
+        return generate_response("filter_plots_success", plot_list = reply)
 
-    return "Plotbot: I didn't understand. For crops, try 'Show crops where ...' and for plots, try 'Show plots where ...'"
+    return generate_response("filter_invalid")
 
 def handle_confirmation(query):
     q = query.lower()
@@ -296,7 +292,7 @@ def handle_confirmation(query):
     if any(kw in q for kw in ["yes", "confirm", "proceed"]):
         create_planting(tx["selected_plot"], tx["selected_crop"][0], conversation_context["user_id"])
         handle_cancel_transaction()
-        return "Plotbot: Transaction successfully confirmed!"
+        return generate_response("confirm_success")
     elif any(kw in q for kw in ["cancel", "leave", "exit"]):
         return handle_cancel_transaction()
     elif "change plot" in q:

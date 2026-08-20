@@ -44,10 +44,10 @@ def load_csv_corpus(root_path, question_col='Question', answer_col='Answer'):
             if question:
                 if question in question_exists:
                     existing_entries = corpus[question_exists[question]]
-                    existing_answers = [a for a in existing_entries['answers'].split('; ') if a]
+                    existing_answers = [a for a in existing_entries['answers'].split('\n') if a]
 
                     if answer and answer not in existing_answers:
-                        existing_entries['answers'] += '; ' + answer
+                        existing_entries['answers'] += '\n' + answer
                 else:
                     corpus[next_id] = {"question": question, "answers": answer}
                     question_exists[question] = next_id
@@ -254,6 +254,7 @@ if __name__ == "__main__":
     #print("Building inverted index")
     #index = build_inverted_index(corpus)
     #dump(index, dump_path)
+
     #print("Loading corpus")
     #X, y = load_open_corpus()
     #print("training")
