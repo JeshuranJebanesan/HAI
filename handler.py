@@ -298,25 +298,22 @@ def handle_confirmation(query):
     elif "change plot" in q:
         tx["selected_plot"] = None
         conversation_context["state"] = "in_transaction"
-        return f"Plotbot: Plot selection cleared\n{handle_selection(tx['selected_crop'][1])}"
+        reply = handle_selection(tx['selected_crop'][1])
+        return generate_response("clear_plot", nested_response = reply)
     elif "change crop" in q:
         tx["selected_crop"] = None
         conversation_context["state"] = "in_transaction"
         plot_str = f"Plot {tx['selected_plot']}"
-        return f"Plotbot: Crop selection cleared\n{handle_selection(plot_str)}"
+        reply = handle_selection(plot_str)
+        return generate_response("clear_crop", nested_response = reply)
     else:
-        return "Plotbot: Sorry, I didn't get that. Type 'yes', 'cancel', 'change plot' or 'change crop'"
+        return generate_response("confirm_invalid")
 
 def can_confirm():
     tx = conversation_context["transaction"]
     if tx["selected_plot"] and tx["selected_crop"]:
         conversation_context["state"] = "confirming_transaction"
-        return (
-            f"Plotbot: Selection Complete!\n"
-            f"- Selected Plot: #{tx['selected_plot']}\n"
-            f"- Selected Crop: {tx['selected_crop'][1]}\n"
-            f"Would you like to confirm? (Type 'yes', 'cancel', 'change plot' or 'change crop')"
-        )
+        return generate_response("confirm_prompt", selected_plot = tx['selected_plot'], selected_crop = tx['selected_crop'][1])
     return None
 
 def handle_selection(query):
@@ -333,7 +330,7 @@ def handle_selection(query):
         available_ids = [p[0] for p in available_plots]
 
         if plot_id not in available_ids:
-            return f"Plotbot: Plot #{plot_id} is either invalid or currently occupied. Please choose an available plot."
+            return generate_response("select_plot_invalid", id = plot_id)
 
         tx["selected_plot"] = plot_id
         prompt = can_confirm()
@@ -341,8 +338,8 @@ def handle_selection(query):
             return prompt
         matching_crops = get_available_crops(plot_id=plot_id)
         crops_str = ", ".join([c[1] for c in matching_crops])
-        return f"Plotbot: Selected Plot #{plot_id}. Suitable crops for this plot: {crops_str}. Which crop would you like?"
-
+        return generate_response("select_plot_need_crop", id = plot_id, crops = crops_str)
+    
     all_crops = get_available_crops()
     for crop in all_crops:
         if crop[1].lower() in q:
@@ -351,10 +348,10 @@ def handle_selection(query):
             if prompt: 
                 return prompt
             matching_plots = get_available_plots(crop_name=crop[1])
-            plots_str = "\n".join([f" - Plot #{p[0]}: {p[1]}sqm, £{p[4]}/mo" for p in matching_plots])
-            return f"Plotbot: Selected Crop: {crop[1]}.\nSuitable plots for this crop:\n{plots_str}.\nWhich plot would you like?"
+            reply = "\n".join([f"- {f'Plot #{p[0]}':<10} | {f'{p[1]}sqm':<10} | {f'£{p[4]}/mo':>10}" for p in matching_plots])
+            return generate_response("select_crop_need_plot", crop_name=crop[1], plots_str = reply)
 
-    return "Plotbot: Please select a valid plot number (e.g. 'Plot 1') or crop name (e.g. 'Tomato')."
+    return generate_response("select_invalid")
 
 def handle_view_options():
     conversation_context["state"] = "in_transaction"
@@ -362,7 +359,7 @@ def handle_view_options():
     crops = get_available_crops()
 
     # nlg this
-    plot_str = "\n".join([f" - Plot #{p[0]}: {p[1]}sqm | {p[2]} soil | {p[3]} | £{p[4]}/mo" for p in plots])
+    plot_str = "\n".join([f"- {f'Plot #{p[0]}':<10} | {f'{p[1]}sqm':<10} | {f'{p[2]} soil':<10} | {f'{p[3]}':<10} | {f'${p[4]}/mo':>7}" for p in plots])
     crop_str = ", ".join([c[1] for c in crops])
 
     return (

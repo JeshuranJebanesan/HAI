@@ -71,10 +71,10 @@ response_templates = {
 
     # Identity
 
-    "identity_name_catch_failed": {
+    "identity_name_catch_failed": [
         "{sorry} I didnt catch your name.\n\n Please tell me one more time. For example:\n\n- 'My name is Alice'\n\n- 'Bob'\n\n- 'Call me Carl'",
         "{sorry} my ears don't work like they used to.\n\n You might have to repeat your name once more. For example:\n\n- 'I'm Dan'\n\n- 'It is Ethan'\n\n- 'Fyodor'"
-    },
+    ],
     "set_name": [
         "Nice to meet you {name}!\n\n I'm here to help you rent plots and plant crops.\n\n Ask me if you want any help or type 'exit' to quit."
     ],
@@ -124,10 +124,10 @@ response_templates = {
         "Transaction successfully confirmed!"
     ],
     "confirm_prompt": [
-        "Selection Complete!\n - Selected Plot: #{selected_plot}\n - Selected Crop: {selected_crop}\nWould you like to confirm? (Type 'yes', 'cancel', 'change plot' or 'change crop')"
+        "Selection Complete!\n\n- Selected Plot: #{selected_plot}\n- Selected Crop: {selected_crop}\n\nWould you like to confirm? (Type 'yes', 'cancel', 'change plot' or 'change crop')"
     ],
     "confirm_invalid": [
-        "{sorry}. Type 'yes', 'cancel', 'change plot' or 'change crop'."
+        "{sorry} I don't understand what you mean.\n\n Type 'yes', 'cancel', 'change plot' or 'change crop'."
     ],
     "clear_plot": [
         "Plot selection cleared.\n{nested_response}"
@@ -136,10 +136,10 @@ response_templates = {
         "Crop selection cleared.\n{nested_response}"
     ],
     "select_plot_invalid": [
-        "Plot #{plot_id} is either invalid or currently occupied. Please choose an available plot."
+        "Plot #{id} is either invalid or currently occupied. Please choose an available plot."
     ],
     "select_plot_need_crop": [
-        "Selected Plot #{plot_id}. Suitable crops for this plot: {crops_str}. Which crop would you like?"
+        "Selected Plot #{id}.\n\n Suitable crops for this plot: {crops}.\n\n Which crop would you like?"
     ],
     "select_crop_need_plot": [
         "Selected Crop: {crop_name}.\nSuitable plots for this crop:\n{plots_str}\nWhich plot would you like?"
@@ -148,13 +148,18 @@ response_templates = {
         "Please select a valid plot number (e.g. 'Plot 1') or crop name (e.g. 'Tomato')."
     ],
     "view_options": [
-        "Welcome to Plot Bookings!\nAvailable Plots:\n{plot_str}\nAvailable Crops:\n - {crop_str}\nYou can:\n - Filter plots       e.g. 'Show cheap plots where I can plant tomatoes'\n - Filter crops       e.g. 'Show crops I can plant in plot 5'\n - Select directly    e.g. 'Select Plot 2'\n - Cancel transaction e.g 'cancel'"
+        "Welcome to Plot Bookings!\n\n Available Plots:\n{plot_str}\n\n Available Crops:\n- {crop_str}\n\nYou can:\n- Filter plots       e.g. 'Show cheap plots where I can plant tomatoes'\n- Filter crops       e.g. 'Show crops I can plant in plot 5'\n- Select directly    e.g. 'Select Plot 2'\n- Cancel transaction e.g 'cancel'"
     ],
 }
 
 def generate_response(key, **kwargs):
-    options = response_templates["key"]
+    options = response_templates.get("key", response_templates["general_fallback"])
     template = random.choice(options)
     template = apply_synonyms(template)
 
-    return prefix_lines(template.format(**kwargs))
+    try:
+        formatted = template.format(**kwargs)
+    except KeyError:
+        formatted = template
+
+    return prefix_lines(formatted)
