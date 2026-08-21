@@ -359,19 +359,10 @@ def handle_view_options():
     crops = get_available_crops()
 
     # nlg this
-    plot_str = "\n".join([f"- {f'Plot #{p[0]}':<10} | {f'{p[1]}sqm':<10} | {f'{p[2]} soil':<10} | {f'{p[3]}':<10} | {f'${p[4]}/mo':>7}" for p in plots])
-    crop_str = ", ".join([c[1] for c in crops])
+    plots = "\n".join([f"- {f'Plot #{p[0]}':<10} | {f'{p[1]}sqm':<10} | {f'{p[2]} soil':<10} | {f'{p[3]}':<20} | {f'£{p[4]}/mo':>15}" for p in plots])
+    crops = ", ".join([c[1] for c in crops])
 
-    return (
-        f"Plotbot: Welcome to Plot Bookings!\n"
-        f"Available Plots:\n{plot_str}\n"
-        f"Available Crops:\n - {crop_str}\n"
-        f"You can:\n"
-        f"- Filter plots       e.g. 'Show cheap plots where I can plant tomatoes' or 'Show plots with loam soil'\n"
-        f"- Filter crops       e.g. 'Show crops I can plant in plot 5' or 'Show crops that need partial shade'\n"
-        f"- Select directly    e.g. 'Select Plot 2' or 'I want to plant apples'\n"
-        f"- Cancel transaction e.g 'cancel'"
-    )
+    return generate_response("view_options", plot_str = plots, crop_str = crops)
 
 def route_transaction_intent(query):
     state = conversation_context["state"]
@@ -431,12 +422,14 @@ def handle_greetings():
 def route_small_talk_intent(query):
     state = conversation_context["state"]
     intent = predict_small_talk_intent(query)
+    print(state)
+    print(intent)
 
     match (state, intent):
         case("wellbeing_response", _):
             return handle_wellbeing_response(query)
         case(_, intent):
-            handlers[intent](query)
+            return handlers[intent]()
 
 ### Top Level Intent
 
@@ -457,13 +450,15 @@ def route_top_level_intent(query):
     intent = predict_top_level_intent(query)
 
     match (state, intent):
-        case ("awaiting_name", _):
-            return route_identity_intent(query)
         case (_, "terminate"):
             return intent
+        case ("awaiting_name", _):
+            return route_identity_intent(query)
         case("selecting_option" | "in_transaction" | "confirming_transaction", _):
             return route_transaction_intent(query)
-        case("idle" | "wellbeing_response", _):
+        case("wellbeing_response", "small_talk"):
+            return route_small_talk_intent(query)
+        case("idle", _):
             return handlers[intent](query)
         case _:
             return f"Plotbot: Sorry, I didn't really understand that {state, intent}."

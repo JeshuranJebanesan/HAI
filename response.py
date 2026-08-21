@@ -40,7 +40,14 @@ def apply_synonyms(template):
     def replace_pos(match):
         pos = match.group(1).lower()
         word = match.group(2)
-        return synonym(word, pos)
+        syn_word = synonym(word, pos)
+
+        start_idx = match.start()
+        prefix = template[:start_idx].rstrip()
+
+        if not prefix or prefix[-1] in ".!?\n":
+            return syn_word.capitalize()
+        return syn_word
 
     template = re.sub(r"\{(a|n|v|r):([a-zA-Z]+)\}", replace_pos, template)
 
@@ -49,12 +56,16 @@ def apply_synonyms(template):
 
     # should implement a cleaner fix for getting name without non circular imports but format kwaargs method too inconsistent. could just implement oop
     from handler import conversation_context
-    name = conversation_context["name"]
+    name = conversation_context.get("name") or "there"
     template = re.sub(r"\{name\}", name, template)
 
     return template
 
 response_templates = {
+    "general_fallback" : [
+        "not really sure"
+    ],
+
     # Question Answer
     "qa_success": [
         "{answer}",
@@ -72,8 +83,8 @@ response_templates = {
     # Identity
 
     "identity_name_catch_failed": [
-        "{sorry} I didnt catch your name.\n\n Please tell me one more time. For example:\n\n- 'My name is Alice'\n\n- 'Bob'\n\n- 'Call me Carl'",
-        "{sorry} my ears don't work like they used to.\n\n You might have to repeat your name once more. For example:\n\n- 'I'm Dan'\n\n- 'It is Ethan'\n\n- 'Fyodor'"
+        "{sorry} I didnt catch your name.\n Please tell me one more time. For example:\n\n- 'My name is Alice'\n\n- 'Bob'\n\n- 'Call me Carl'",
+        "{sorry} my ears don't work like they used to.\n You might have to repeat your name once more. For example:\n\n- 'I'm Dan'\n\n- 'It is Ethan'\n\n- 'Fyodor'"
     ],
     "set_name": [
         "Nice to meet you {name}!\n\n I'm here to help you rent plots and plant crops.\n\n Ask me if you want any help or type 'exit' to quit."
@@ -190,7 +201,7 @@ response_templates = {
 }
 
 def generate_response(key, **kwargs):
-    options = response_templates.get("key", response_templates["general_fallback"])
+    options = response_templates.get(key, response_templates["general_fallback"])
     template = random.choice(options)
     template = apply_synonyms(template)
 
