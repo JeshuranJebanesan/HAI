@@ -9,6 +9,7 @@ from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer
 from joblib import load
 from collections import defaultdict
+import numpy as np
 
 from db_manager import create_user, update_user_name, get_available_crops, get_user_plantings, create_planting, get_available_plots
 from response import generate_response
@@ -67,9 +68,27 @@ def load_small_talk_pipelines():
     sentiment_analysis_pipeline = load("dumps/sentiment_analysis_pipeline.joblib")
     small_talk_intent_pipeline = load("dumps/small_talk_intent_pipeline.joblib")
 
+def predict_with_confidence(pipeline, query, threshold=0.2):
+    decision_scores = pipeline.decision_function([query])[0]
+    classes = pipeline.classes_
+
+    if np.ndim(decision_scores) == 0:
+        score = abs(decision_scores)
+        predicted_idx = 1 if decision_scores > 0 else 0
+    else:
+        score = np.max(decision_scores)
+        predicted_idx = np.argmax(decision_scores)
+
+    predicted_label = classes[predicted_idx]
+
+    if score < threshold:
+        return None, score
+        
+    return predicted_label, score
+
 ### Question Answer
 
-def search_query(query, index_data, confidence_threshold=0.2):
+def search_query(query, index_data, confidence_threshold=0.3):
     inverted_index = index_data["inverted_index"]
     doc_vectors = index_data["doc_vectors"]
     doc_norms = index_data["doc_norms"]
@@ -154,10 +173,11 @@ def name_catch(query):
 
     return None
 
-def predict_identity_intent(query):
+def predict_identity_intent(query, threshold = 0):
     if identity_intent_pipeline is None:
         load_identity_intent_pipeline()
-    return identity_intent_pipeline.predict([query])[0]
+    label, _ = predict_with_confidence(identity_intent_pipeline, query, threshold)
+    return label
 
 def handle_name_capture(query):
     name = name_catch(query)
@@ -327,6 +347,8 @@ def handle_selection(query):
         plot_id = int(plot_match.group(1))
 
         available_plots = get_available_plots()
+        if tx["selected_crop"]:
+            available_plots = get_available_plots(crop_name=tx["selected_crop"][1])
         available_ids = [p[0] for p in available_plots]
 
         if plot_id not in available_ids:
@@ -341,6 +363,8 @@ def handle_selection(query):
         return generate_response("select_plot_need_crop", id = plot_id, crops = crops_str)
     
     all_crops = get_available_crops()
+    if tx["selected_plot"]:
+        all_crops = get_available_crops(plot_id=tx["selected_plot"])
     for crop in all_crops:
         if crop[1].lower() in q:
             tx["selected_crop"] = (crop[0], crop[1])
@@ -378,7 +402,7 @@ def route_transaction_intent(query):
             return handle_selection(query)
         case("in_transaction", "filter_options"):
             return handle_filter_options(query)
-        case("in_transaction=", "selection"):
+        case("in_transaction", "selection"):
             return handle_selection(query)
         case("idle" | "wellbeing_response", "view_options" | "selection"):
             return handle_view_options()
@@ -394,10 +418,11 @@ def route_transaction_intent(query):
 
 ### Smalltalk
 
-def predict_small_talk_intent(query):
+def predict_small_talk_intent(query, threshold=0):
     if small_talk_intent_pipeline is None:
         load_small_talk_pipelines()
-    return small_talk_intent_pipeline.predict([query])[0]
+    label, _ = predict_with_confidence(small_talk_intent_pipeline, query, threshold)
+    return label
 
 def predict_sentiment(query):
     if sentiment_analysis_pipeline is None:
@@ -428,6 +453,8 @@ def route_small_talk_intent(query):
             return handle_wellbeing_response(query)
         case(_, intent):
             return handlers[intent]()
+        case _:
+            return generate_response("general_fallback")
 
 ### Top Level Intent
 

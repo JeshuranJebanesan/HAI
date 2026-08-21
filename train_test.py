@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from urllib import request
 # import scikit_posthocs as sp
-#from datasets import load_dataset
+# from datasets import load_dataset
 
 from collections import defaultdict
 
@@ -237,24 +237,4 @@ def eval(scores_dict, output_path):
             f.write("There is no significant difference between the models' performance.")
 
 if __name__ == "__main__":
-    # scores_dict = train_test(root_path="corpus/top_level_intent", dump_path="dumps/top_level_intent_pipeline.joblib")
-    # eval(scores_dict, output_path="evaluation")
-    
-    #csv_path = 'corpus/question_answer/question_answer_dataset.csv'
-    #dump_path = 'dumps/qa_inverted_index.joblib'
-
-    #print("Loading corpus")
-    #corpus = load_csv_corpus(csv_path, question_col='Question', answer_col='Answer')
-    #print("Loaded corpus")
-
-    #print("Building inverted index")
-    #index = build_inverted_index(corpus)
-    #dump(index, dump_path)
-
-    #print("Loading corpus")
-    #X, y = load_open_corpus()
-    #print("training")
-    train(root_path="corpus/small_talk_intent", dump_path="dumps/small_talk_intent_pipeline.joblib")
-    train(root_path="corpus/identity_intent", dump_path="dumps/identity_intent_pipeline.joblib")
-    train(root_path="corpus/top_level_intent", dump_path="dumps/top_level_intent_pipeline.joblib")
-    train(root_path="corpus/transaction_intent", dump_path="dumps/transaction_intent_pipeline.joblib")
+    print()

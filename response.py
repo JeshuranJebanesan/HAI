@@ -24,7 +24,7 @@ def prefix_lines(text, prefix="Plotbot: "):
 
     for line in lines:
         stripped = line.strip()
-        if stripped.startswith("-"):
+        if stripped.startswith("-") or not stripped:
             formatted_lines.append(f"         {line}")
         elif line.startswith(" "):
             formatted_lines.append(f"        {line}")
@@ -93,7 +93,7 @@ response_templates = {
     ],
     "request_name": [
         "Your name is {name}!",
-        "It's somewhere here.\n ...\n ..\n Ah!\n It's {name}.\n Of course..."
+        "I believe it to be {name}."
     ],
     "change_name": [
         "Sure thing! What would you like to change your name to?"
@@ -102,7 +102,7 @@ response_templates = {
     # Discoverability
 
     "discoverability": [
-        "I'm built to help you rent plots and plant crops. But you can also ask me general questions, make small talk and even change your name!\nPlotbot: Example phrases you can use are \"show me available plots\", \"how are you\", \"help me\" and \"exit\"."
+        "I'm built to help you rent plots and plant crops. But you can also ask me general questions, make small talk and even change your name!\n Example phrases you can use are \"show me available plots\", \"how are you\", \"help me\" and \"exit\"."
     ],
 
     # Transaction
@@ -161,7 +161,7 @@ response_templates = {
         "Please select a valid plot number (e.g. 'Plot 1') or crop name (e.g. 'Tomato')."
     ],
     "view_options": [
-        "Welcome to Plot Bookings!\n\n Available Plots:\n{plot_str}\n\n Available Crops:\n- {crop_str}\n\nYou can:\n- Filter plots       e.g. 'Show cheap plots where I can plant tomatoes'\n- Filter crops       e.g. 'Show crops I can plant in plot 5'\n- Select directly    e.g. 'Select Plot 2'\n- Cancel transaction e.g 'cancel'"
+        "Welcome to Plot Bookings!\n\n Available Plots:\n{plot_str}\n\n Available Crops:\n- {crop_str}\n\n You can:\n- Filter plots       e.g. 'Show cheap plots where I can plant tomatoes'\n- Filter crops       e.g. 'Show crops I can plant in plot 5'\n- Select directly    e.g. 'Select Plot 2'\n- Cancel transaction e.g 'cancel'"
     ],
 
     # Small Talk
