@@ -61,7 +61,7 @@ def apply_synonyms(template):
 
 response_templates = {
     "general_fallback" : [
-        "I don't really understand."
+        "I don't really understand. Please rephrase."
     ],
 
     # Question Answer
@@ -102,7 +102,7 @@ response_templates = {
     # Discoverability
 
     "discoverability": [
-        "I'm built to help you rent plots and plant crops. But you can also ask me general questions, make small talk and even change your name!\nPlotbot: Example phrases you can use are \"Show me available plots\", \"how are you\", \"help me\" and \"exit\"."
+        "I'm built to help you rent plots and plant crops. But you can also ask me general questions, make small talk and even change your name!\nPlotbot: Example phrases you can use are \"show me available plots\", \"how are you\", \"help me\" and \"exit\"."
     ],
 
     # Transaction
