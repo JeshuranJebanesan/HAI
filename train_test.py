@@ -191,12 +191,8 @@ def train_test(root_path, dump_path):
 
     return scores_dict
 
-def train(inputX, inputy, root_path, dump_path):
-    if root_path:
-        X, y = load_text_corpus(root_path)
-    else:
-        X = inputX
-        y = inputy
+def train(root_path, dump_path):
+    X, y = load_text_corpus(root_path)
 
     pipeline = make_pipeline(TfidfVectorizer(tokenizer=stemmed_words, token_pattern=None, ngram_range=(1,2), use_idf=True, sublinear_tf=True), LinearSVC())
 
@@ -258,4 +254,7 @@ if __name__ == "__main__":
     #print("Loading corpus")
     #X, y = load_open_corpus()
     #print("training")
-    train(inputX=None, inputy=None, root_path="corpus/small_talk", dump_path="dumps/small_talk_intent_pipeline.joblib")
+    train(root_path="corpus/small_talk_intent", dump_path="dumps/small_talk_intent_pipeline.joblib")
+    train(root_path="corpus/identity_intent", dump_path="dumps/identity_intent_pipeline.joblib")
+    train(root_path="corpus/top_level_intent", dump_path="dumps/top_level_intent_pipeline.joblib")
+    train(root_path="corpus/transaction_intent", dump_path="dumps/transaction_intent_pipeline.joblib")
