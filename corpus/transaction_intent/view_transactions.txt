@@ -16,5 +16,5 @@ View my active transactions
 List my rented plots
 Check my active plantings
 Show my booked plots
-Ciew my rented plots
+View my rented plots
 See my active bookings

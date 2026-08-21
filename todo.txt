@@ -8,7 +8,7 @@ can import stemmed words from handler in traintest
     dont need global model
     can load models in handler and not in main
 
-add other models within cw restrictions
+add other models within cw restrictions. dont know if they are allowed
     10% accuracy on linsvc missing is restrictive
     mlpclassifier, complementnb, sgdclassifier, ridgeclassifer
 
@@ -28,13 +28,3 @@ multiple rounds of cleaning
 query is cleaned in toplevelintent, then maybe in sublevelintent
 should clean query and then send to intentrouters
 maybe a problem if different cleaning needed e.g stopwords perform worse on transactions but better on questionanswer
-
-transactions
-discoverability for each state
-confirmation/cancel
-aggregation
-doc
-video
-
-getplots should return available plots
-qa;

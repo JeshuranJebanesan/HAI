@@ -44,3 +44,11 @@ Filter crops for plot 12
 Show largest available plots
 Search plots with loam soil and full sun
 Show crops matching plot 8
+Show plots where I can plant radishes
+Which plots let me plant tomatoes
+I want to see the cheapest plots
+What are the smallest plots
+Filter crops by sun
+Can you give me all plots that I can plant Mint on
+Let me see all the crops I can plant on plot 16
+Show crops where I can 

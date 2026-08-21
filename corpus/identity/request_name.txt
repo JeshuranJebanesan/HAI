@@ -12,3 +12,6 @@ Who am I to you?
 Can you tell me my name?
 Do you recall my name?
 What is the name you have saved for me?
+What am I called?
+Can you tell me what I am called?
+Tell me my name.

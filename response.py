@@ -25,11 +25,9 @@ def prefix_lines(text, prefix="Plotbot: "):
     for line in lines:
         stripped = line.strip()
         if stripped.startswith("-"):
-            formatted_lines.append(f"------   {line}")
-        elif not stripped:
-            formatted_lines.append("|")
+            formatted_lines.append(f"         {line}")
         elif line.startswith(" "):
-            formatted_lines.append(f"------  {line}")
+            formatted_lines.append(f"        {line}")
         else:
             formatted_lines.append(f"{prefix}{line}")
 
@@ -63,7 +61,7 @@ def apply_synonyms(template):
 
 response_templates = {
     "general_fallback" : [
-        "not really sure"
+        "I don't really understand."
     ],
 
     # Question Answer
@@ -83,11 +81,11 @@ response_templates = {
     # Identity
 
     "identity_name_catch_failed": [
-        "{sorry} I didnt catch your name.\n Please tell me one more time. For example:\n\n- 'My name is Alice'\n\n- 'Bob'\n\n- 'Call me Carl'",
-        "{sorry} my ears don't work like they used to.\n You might have to repeat your name once more. For example:\n\n- 'I'm Dan'\n\n- 'It is Ethan'\n\n- 'Fyodor'"
+        "{sorry} I didnt catch your name.\n Please tell me one more time. For example:\n- 'My name is Alice'\n- 'Bob'\n- 'Call me Carl'",
+        "{sorry} my ears don't work like they used to.\n You might have to repeat your name once more. For example:\n- 'I'm Dan'\n- 'It is Ethan'\n- 'Fyodor'"
     ],
     "set_name": [
-        "Nice to meet you {name}!\n\n I'm here to help you rent plots and plant crops.\n\n Ask me if you want any help or type 'exit' to quit."
+        "Nice to meet you {name}!\n I'm here to help you rent plots and plant crops.\n Ask me if you want any help or type 'exit' to quit."
     ],
     "update_name": [
         "{a:wonderful}! Your name has been updated to {name}.",
@@ -95,7 +93,7 @@ response_templates = {
     ],
     "request_name": [
         "Your name is {name}!",
-        "It's somewhere here.\n\n ...\n\n ..\n\n Ah!\n\n It's {name}.\n\n Of course..."
+        "It's somewhere here.\n ...\n ..\n Ah!\n It's {name}.\n Of course..."
     ],
     "change_name": [
         "Sure thing! What would you like to change your name to?"
@@ -104,7 +102,7 @@ response_templates = {
     # Discoverability
 
     "discoverability": [
-        "I'm built to help you rent plots and plant crops. But you can also ask me general questions, make small talk and even change your name!\nPlotbot: Example phrases you can use are \"I want to rent a plot\", \"how are you\", \"help me\" and \"exit\"."
+        "I'm built to help you rent plots and plant crops. But you can also ask me general questions, make small talk and even change your name!\nPlotbot: Example phrases you can use are \"Show me available plots\", \"how are you\", \"help me\" and \"exit\"."
     ],
 
     # Transaction
@@ -171,7 +169,7 @@ response_templates = {
     "positive": [
         "I'm {a:glad} to hear it {name}!",
         "Sounds {a:wonderful}. I hope it keeps up!",
-        "Cool beans :)"
+        "Cool beans :) I'm happy to hear that from you!"
     ],
     "negative": [
         "That sounds tough. Keep your head up {name}.",
@@ -179,24 +177,24 @@ response_templates = {
         "I'm sorry to hear that. I just know you'll get over this {r:valiantly}."
     ],
     "neutral": [
-        "Okay, understood."
-        "Fair enough."
+        "Okay, understood.",
+        "Fair enough.",
         "Chill."
     ],
     "weather": [
         "It's always sunny in Philadelphia!",
-        "I heard there will be {a:unbearable} rain later today.\n\n Good thing I love jumping in muddy puddles!",
+        "I heard there will be {a:unbearable} rain later today.\n Good thing I love jumping in muddy puddles!",
         "OH MY GOSH THERE'S A SOLAR ECLIPSE!!!"
     ],
     "greeting": [
-        "{greet} {name}! What can I do you for?"
-        "{greet}. Nice to see you today {name}!"
-        "Well, well, well. I've been expecting you {name}...\n\n How can I help you today >:)"
+        "{greet} {name}! What can I do for you?",
+        "{greet}. Nice to see you today {name}!",
+        "Well, well, well. I've been expecting you {name}...\n How can I help you today >:)"
     ],
     "wellbeing": [
         "I'm feeling {a:positive}, thanks for asking. How are you?",
         "I'm doing great {name}. What about you?",
-        "It's a {a:simple} life being a transactional, conversational plot booking chatbot.\n\n Not a {n:worry} in the world!\n\n How is it on the other side of the screen?"
+        "It's a {a:simple} life being a transactional, conversational plot booking chatbot.\n Not a {n:worry} in the world!\n How is it on the other side of the screen?"
     ]
 }
 

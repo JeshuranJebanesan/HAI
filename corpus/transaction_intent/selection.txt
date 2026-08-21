@@ -18,3 +18,5 @@ Pick tomato for this plot
 I'll select plot 20
 Select crop zucchini
 I want to select plot 6
+Let me book plot 15
+I would like to plant radishes

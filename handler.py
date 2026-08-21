@@ -69,7 +69,7 @@ def load_small_talk_pipelines():
 
 ### Question Answer
 
-def search_query(query, index_data, confidence_threshold=0.1):
+def search_query(query, index_data, confidence_threshold=0.2):
     inverted_index = index_data["inverted_index"]
     doc_vectors = index_data["doc_vectors"]
     doc_norms = index_data["doc_norms"]
@@ -378,14 +378,14 @@ def route_transaction_intent(query):
             return handle_selection(query)
         case("in_transaction", "filter_options"):
             return handle_filter_options(query)
-        case("in_transaction", "selection"):
+        case("in_transaction=", "selection"):
             return handle_selection(query)
-        case("idle" | "wellbeing_response", "view_options"):
+        case("idle" | "wellbeing_response", "view_options" | "selection"):
             return handle_view_options()
         case("idle" | "wellbeing_response", "view_transactions"):
             return handle_view_transactions()
         case _:
-            return f"Dont know {state} {intent}"
+            return generate_response("general_fallback")
             
                         
 # train transaction classifier and test. can use similar keyword extraction and flow to identity
@@ -422,8 +422,6 @@ def handle_greetings():
 def route_small_talk_intent(query):
     state = conversation_context["state"]
     intent = predict_small_talk_intent(query)
-    print(state)
-    print(intent)
 
     match (state, intent):
         case("wellbeing_response", _):
@@ -461,7 +459,7 @@ def route_top_level_intent(query):
         case("idle", _):
             return handlers[intent](query)
         case _:
-            return f"Plotbot: Sorry, I didn't really understand that {state, intent}."
+            return generate_response("general_fallback")
 
 # inital traintest didnt keep underscores on qa and smalltalk. if time retrain with underscores for keys
 handlers = {

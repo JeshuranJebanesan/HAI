@@ -3,41 +3,50 @@ Show me available plots for rent.
 How can I book a plot.
 Are there any small plots available.
 I am looking for a plot with full sunlight.
-Can I reserve plot 101.
+Can I reserve plot 10.
 Find me a plot with loam soil.
-What plots are available under 20 pounds per month.
 I would like to hire an allotment plot.
 Show me large allotment plots.
-Is plot 102 still available.
-I want to search for a plot with water access.
+Is plot 12 still available.
 How much does it cost to rent a plot.
 Can I sign up for a plot lease.
 Filter plots by clay soil.
 List all available allotment spaces.
-I want to book Plot-104 right now.
+I want to book Plot-14 right now.
 Find an allotment with partial shade.
 Are there any cheap plots available for rent.
 Show me plots suitable for beginners.
-I want to rent Plot-103.
+I want to rent Plot-13.
 Can you help me select a plot.
-What is the monthly fee for plot 105.
-Show me plot details for plot 106.
+Show me plot details for plot 16.
 I need a plot that is at least 20 square meters.
 How do I rent a garden plot.
 Reserve an allotment plot for me.
 What plots do you have with good soil.
 Check availability for Plot-101.
-I want to cancel my plot rental.
-Can I terminate my allotment lease.
 I need a new plot for planting.
 Show me plots with sandy soil.
-Are there any 15 sqm plots free.
 I would like to see plot prices.
 Book an allotment plot for me please.
 Find a plot that gets full sun.
 Show me all unrented plots.
-I want to lease Plot-102.
 Where can I pick a plot to rent.
 Radish
 Carrot
 Plot 5
+Cancel this transaction.
+Show me my current bookings.
+Show me all the plots that I currently own.
+What are my plantings?
+Filter crops by sandy soil
+Show all cheap plots where I can plant radishes
+Which crops can I plant on plot 15
+Which crops need partial shade
+Show me the biggest plots that need full sun
+Plot 12
+Plot 4
+Plot 6
+Tomatoes
+Swiss Chard
+Lettuce
+Mint

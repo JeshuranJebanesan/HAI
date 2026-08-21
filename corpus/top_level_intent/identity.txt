@@ -1,13 +1,13 @@
-My name is
-Call me
-I am
-I would like to be called
-Please address me as
-Change my name to
-You can call me
-Update my name to
-My name has changed to
-I want to change my name to
+My name is Alice
+Call me Bob
+I am Jesh
+I would like to be called Andy
+Please address me as Dominic
+Change my name to Ethan
+You can call me Frederick
+Update my name to Gary
+My name has changed to Hilda
+I want to change my name to Indigo
 What is my name?
 What’s my name?
 Do you know who I am?
@@ -18,16 +18,16 @@ Who am I to you?
 Can you tell me my name?
 Do you recall my name?
 What is the name you have saved for me?
-Remember my name is
-Don't forget my name is
-From now on, call me
-I want you to call me
-Please remember that I am
-I prefer to be called
-Just call me
-Set my name as
-My name is now
-Call me from now on
+Remember my name is Jay
+Don't forget my name is Karen
+From now on, call me Lucy
+I want you to call me Max
+Please remember that I am Nolan
+I prefer to be called Owen
+Just call me Parvati
+Set my name as Quentin
+My name is now Rita
+Call me from now on Samuel
 Can you change what you call me?
 I need to update my name.
 How do I change my name with you?
@@ -36,7 +36,7 @@ Can I change my name?
 I want to use a different name.
 Please reset my name.
 Change my display name.
-Can you forget my old name and call me
+Can you forget my old name and call me Tara
 I want to edit my name.
 John
 Bob
