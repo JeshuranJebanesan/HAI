@@ -1,6 +1,6 @@
-### Plotbot: An Allotment Plot Chatbot
+# Plotbot: An Allotment Plot Chatbot
 
-#### Intro
+## Introduction
 Plotbot is designed to lease allotment plots with other conversational functionality
 
 It is capable of:
@@ -11,11 +11,19 @@ It is capable of:
 - transaction flow
 - natural language generation
 
+The chatbot was developed in Python using SQLite for data persistence.
+
+With the exception of question answering and sentiment analysis, all training data was self generated.
+
+## Chatbot Architecture
+
+
+
+### Project Structure
 main.py
   - entry for chatbot
   - captures username on startup and begins conversation flow from user to chatbot
   - routes user queries to handler.py for appropriate response
-  - capable of multi turn dialogue
 
 handler.py + dumps/
   - loads models from dumps/
@@ -43,7 +51,15 @@ response.py
   - capable of personalisation such as different responses based on sentiment
   - can insert pos synonyms or general word categories such as greet, sorry...
 
-#### Chatbot Architecture
-#### Conversational Design
-#### Evaluation
-#### Discussion
+### Database Architecture
+Plotbot uses an SQLite 3NF relational database, transaction.db, to persist, manipulate and display all user, plot, crop and planting data using these 4 tables:
+  - user: pk, others
+  - plot:
+  - crop:
+  - planting:
+
+This schema was implemented using SQLite as it is a lightweight and serverless solution making the system portable. Also, it enforces referential integrity meaning for instance, a planting can't reference a non existent plot or user. SQLite also allows for complex sorting and filtering operations, such as showing users their requested views, filtering by plot or crop and sorting by size or price. It also remains maintainable as the system grows setting it apart from other considered data storage options such as a JSON-based file string or Python dictionary.
+
+## Conversational Design
+## Evaluation
+## Discussion
